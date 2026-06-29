@@ -64,7 +64,7 @@ C = {
     "metrics": "\u65f6\u5e8f\u6307\u6807",
     "task2": "\u4efb\u52a12\u4e2d\u65ad\u5de5\u51b5\u8bf4\u660e",
     "cfd_input": "\u5916\u90e8\u590d\u6838\u8f93\u5165\u5305\uff081D \u2192 CFD/\u5c40\u90e8\u6a21\u578b\uff09",
-    "cfd_result": "\u5c40\u90e8\u5206\u5c42\u590d\u6838\u7ed3\u679c\uff08OpenFOAM \u6807\u91cf\u8f93\u8fd0 + reduced x-z\uff09",
+    "cfd_result": "\u5c40\u90e8\u5206\u5c42\u590d\u6838\u7ed3\u679c\uff08\u5c40\u90e8\u4e8c\u7ef4\u6d6e\u5347 CFD / OpenFOAM \u6807\u91cf\u590d\u6838\uff09",
     "no_cfd": "\u672a\u5bfc\u5165\u5c40\u90e8\u5206\u5c42\u590d\u6838\u7ed3\u679c\u3002\u5f53\u524d\u4e0d\u663e\u793a\u4e91\u56fe\uff0c\u907f\u514d\u5c06\u4e00\u7ef4\u53ef\u89c6\u5316\u8bef\u8ba4\u4e3a CFD\u3002",
     "mol": "\u6469\u5c14\u5206\u6570 / \u4f53\u79ef\u5206\u6570",
     "xpos": "\u7ba1\u9053\u4f4d\u7f6e x (km)",
@@ -337,7 +337,7 @@ def render_task2():
 
 def render_cfd_input():
     st.subheader(C["cfd_input"])
-    st.caption("\u8fd9\u91cc\u662f\u4ece\u4e00\u7ef4\u6a21\u578b\u5bfc\u51fa\u7684\u5c40\u90e8\u521d\u59cb\u573a\uff0c\u7528\u4e8e OpenFOAM/Fluent \u6216\u5c40\u90e8\u5206\u5c42\u6a21\u578b\u590d\u6838\uff0c\u4e0d\u662f CFD \u6c42\u89e3\u7ed3\u679c\u3002")
+    st.caption("\u8fd9\u91cc\u662f\u4ece\u4e00\u7ef4\u6a21\u578b\u5bfc\u51fa\u7684\u5c40\u90e8\u521d\u59cb\u573a\uff0c\u7528\u4e8e\u5c40\u90e8\u4e8c\u7ef4\u6d6e\u5347 CFD\u3001OpenFOAM/Fluent \u6216\u5176\u4ed6\u590d\u6838\u6d41\u7a0b\uff1b\u672c\u8f93\u5165\u5305\u672c\u8eab\u4e0d\u662f\u6c42\u89e3\u7ed3\u679c\u3002")
     base = ROOT / "cfd_cases"
     cases = sorted(p for p in base.iterdir() if p.is_dir()) if base.exists() else []
     if not cases:
@@ -377,18 +377,26 @@ def render_cfd_results(case_dir):
     if not metrics or missing:
         st.warning(C["no_cfd"])
         return
-    st.success("\u5df2\u8bfb\u53d6\u5c40\u90e8\u590d\u6838\u7ed3\u679c\uff1a\u4e91\u56fe\u6765\u81ea reduced x-z \u5206\u5c42\u6a21\u578b\uff0cVTU \u6765\u81ea OpenFOAM scalarTransportFoam \u5bfc\u51fa\uff0c\u4e0d\u662f\u7f51\u9875\u4e34\u65f6\u4f2a\u9020\u3002")
+    solver = str(metrics.get("solver", ""))
+    if "low-Mach buoyant" in solver:
+        st.success("\u5df2\u8bfb\u53d6\u5c40\u90e8\u4e8c\u7ef4\u6d6e\u5347 CFD \u7ed3\u679c\uff1a\u5df2\u6c42\u89e3\u52a8\u91cf\u3001\u6d6e\u529b\u548c H2/N2/Air \u7ec4\u5206\u8f93\u8fd0\uff1b\u5b83\u4e0d\u662f\u5b8c\u6574\u4e09\u7ef4\u53ef\u538b\u7f29 CFD\u3002")
+    else:
+        st.success("\u5df2\u8bfb\u53d6\u5c40\u90e8\u590d\u6838\u7ed3\u679c\uff1a\u4e91\u56fe\u6765\u81ea\u5916\u90e8\u6216\u5c40\u90e8\u590d\u6838\u6d41\u7a0b\uff0c\u4e0d\u662f\u7f51\u9875\u4e34\u65f6\u4f2a\u9020\u3002")
     st.caption(f"case: {Path(case_dir).name}")
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("\u4e0a/\u4e0b\u534a\u7ba1 H2 \u5dee\u503c", f"{metrics.get('top_bottom_h2_delta', 0):.3f}")
     c2.metric("\u4e0a\u534a\u7ba1 H2 \u6700\u5927\u503c", f"{metrics.get('top_h2_max', 0):.3f}")
     c3.metric("\u53ef\u71c3\u9762\u79ef\u6bd4\u4f8b", f"{100*metrics.get('flammable_area_ratio', 0):.1f}%")
     c4.metric("\u53ef\u71c3\u4f53\u79ef\u6bd4\u4f8b", f"{100*metrics.get('flammable_volume_ratio', 0):.1f}%")
-    st.caption(str(metrics.get("solver", "")))
+    extra_cols = st.columns(3)
+    extra_cols[0].metric("\u7f51\u683c\u5355\u5143\u6570", f"{int(metrics.get('mesh_cells', 0))}")
+    extra_cols[1].metric("\u6700\u5927\u5c40\u90e8\u901f\u5ea6", f"{metrics.get('max_speed_mps', 0):.3f} m/s")
+    extra_cols[2].metric("\u7ec4\u5206\u548c\u8bef\u5dee", f"{metrics.get('species_sum_max_error', 0):.1e}")
+    st.caption(solver)
     summary_path = ROOT / "outputs" / "cfd3d" / "openfoam_scalarTransport_summary.csv"
     if summary_path.exists():
         summary = pd.read_csv(summary_path)
-        case_id = Path(case_dir).name.removesuffix("_reduced2d")
+        case_id = Path(case_dir).name.removesuffix("_reduced2d").removesuffix("_buoyant2d")
         row = summary[summary["case_id"] == case_id]
         if not row.empty:
             status = row.iloc[0]
@@ -423,6 +431,8 @@ def render_cfd_results(case_dir):
     cols = st.columns(2)
     cols[0].image(str(images["cross_section_h2"]), caption="\u5706\u622a\u9762 H2 \u4e91\u56fe")
     cols[1].image(str(images["flammable_region"]), caption="\u53ef\u71c3\u98ce\u9669\u533a\u4e91\u56fe")
+    if "velocity_magnitude" in images:
+        st.image(str(images["velocity_magnitude"]), caption="\u6d6e\u529b\u9a71\u52a8\u5c40\u90e8\u901f\u5ea6\u573a")
     vol = find_cfd_volume_file(case_dir)
     if vol:
         st.caption(f"VTK/VTU: {vol.relative_to(ROOT)}")
@@ -437,6 +447,9 @@ def render_cfd_results(case_dir):
 
 
 def default_cfd_label_index(labels):
+    for i, label in enumerate(labels):
+        if "stop60" in label and "buoyant2d" in label:
+            return i
     for i, label in enumerate(labels):
         if "stop60" in label:
             return i
@@ -453,7 +466,7 @@ def main():
                 [
                     "- **1D \u4e3b\u6a21\u578b**\uff1a\u8d1f\u8d23 12 km \u5168\u7ba1\u7f6e\u6362\u3001\u6df7\u6c14\u6bb5\u3001\u53ef\u71c3\u98ce\u9669\u6bb5\u548c\u6709\u6548 N2 \u9694\u79bb\u6bb5\u3002",
                     "- **\u5c40\u90e8\u653e\u5927**\uff1a\u6765\u81ea 1D \u8ba1\u7b97\u7ed3\u679c\uff0c\u7528\u4e8e\u67e5\u770b H2/N2/Air \u754c\u9762\u3002",
-                    "- **\u5c40\u90e8\u5206\u5c42\u590d\u6838**\uff1a\u8bfb\u53d6 reduced x-z \u5206\u5c42\u6a21\u578b\u548c OpenFOAM scalarTransportFoam \u6807\u91cf\u8f93\u8fd0\u7ed3\u679c\uff0c\u4e0d\u7b49\u540c\u4e8e\u5b8c\u6574\u4e09\u7ef4\u591a\u7ec4\u5206\u91cd\u529b CFD\u3002",
+                    "- **\u5c40\u90e8\u5206\u5c42\u590d\u6838**\uff1a\u8bfb\u53d6\u5c40\u90e8\u4e8c\u7ef4\u6d6e\u5347 CFD \u7ed3\u679c\uff08\u542b\u52a8\u91cf\u3001\u6d6e\u529b\u548c H2/N2/Air \u7ec4\u5206\u8f93\u8fd0\uff09\uff1bOpenFOAM scalarTransportFoam \u7ed3\u679c\u4f5c\u4e3a\u6807\u91cf\u8f93\u8fd0\u63a5\u53e3\u590d\u6838\u3002\u8fd9\u4e00\u5c42\u4ecd\u4e0d\u7b49\u540c\u4e8e\u5b8c\u6574\u4e09\u7ef4\u53ef\u538b\u7f29 CFD\u3002",
                     "- **3D \u7ba1\u9053\u52a8\u753b**\uff1a\u53ea\u662f\u5c06 1D \u6469\u5c14\u5206\u6570\u6620\u5c04\u5230\u7ba1\u9053\u753b\u9762\uff0c\u4fbf\u4e8e\u7b54\u8fa9\u5c55\u793a\u3002",
                 ]
             )

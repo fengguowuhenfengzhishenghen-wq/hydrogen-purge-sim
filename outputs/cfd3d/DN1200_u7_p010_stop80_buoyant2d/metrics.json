@@ -1,0 +1,19 @@
+{
+  "solver": "Python 2D low-Mach buoyant multi-species CFD (vorticity-streamfunction)",
+  "model_scope": "local x-z shutdown window; not full 3D compressible pipe CFD",
+  "mesh_cells": 2525,
+  "stop_duration_s": 300.0,
+  "local_length_m": 1200.0,
+  "top_bottom_h2_delta": 0.019660189930012423,
+  "top_h2_max": 0.8575108674348958,
+  "bottom_h2_mean": 0.09823815775799905,
+  "flammable_area_ratio": 0.0,
+  "flammable_volume_ratio": 0.0,
+  "max_speed_mps": 0.2925603300967238,
+  "mean_speed_mps": 0.031747911625747756,
+  "species_sum_max_error": 2.220446049250313e-16,
+  "case_name": "DN1200_u7_p010_stop80_buoyant2d",
+  "source_case": "DN1200_u7_p010_stop80",
+  "D_m": 1.2,
+  "note": "Solved local 2D low-Mach buoyant multi-species CFD check. It includes momentum, buoyancy, and H2/N2/Air species transport, but is not a full 3D compressible pipe CFD."
+}
