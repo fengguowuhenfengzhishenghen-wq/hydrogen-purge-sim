@@ -117,11 +117,15 @@ def pipe_frame_payload(result, particles):
             probs = np.array([h2, n2, air], dtype=float)
             probs = probs / max(float(probs.sum()), 1.0e-12)
             comp = rng.choice(["H2", "N2", "Air"], p=probs)
+            y = 0.50 + rng.normal(0, 0.17) + (comp == "Air") * 0.070 * strat - (comp == "H2") * 0.105 * strat
+            y = float(np.clip(y, 0.18, 0.82))
             dots.append(
                 {
                     "x": float(0.05 + 0.90 * result.x_grid[k] / result.params.L),
-                    "y": float(0.50 + rng.normal(0, 0.055) + (comp == "Air") * 0.070 * strat - (comp == "H2") * 0.105 * strat),
+                    "y": y,
                     "c": COL[comp],
+                    "r": float(rng.uniform(1.6, 3.3)),
+                    "a": float(rng.uniform(0.22, 0.48)),
                 }
             )
         frames.append(
@@ -196,20 +200,54 @@ def render_pipe(result, idx, particles):
       ctx.fillStyle = '#eef5fc';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       const x0 = 70, y0 = 122, w = 1060, h = 74, r = 37;
+
+      ctx.save();
+      ctx.shadowColor = 'rgba(51, 65, 85, 0.18)';
+      ctx.shadowBlur = 10;
+      ctx.shadowOffsetY = 4;
+      roundedRect(x0, y0, w, h, r);
+      ctx.fillStyle = 'rgba(255,255,255,0.28)';
+      ctx.fill();
+      ctx.restore();
+
       ctx.save();
       roundedRect(x0, y0, w, h, r);
       ctx.clip();
       const cw = w / f.cells.length;
+      const fog = ctx.createLinearGradient(x0, y0, x0, y0 + h);
+      fog.addColorStop(0.00, 'rgba(255,255,255,0.50)');
+      fog.addColorStop(0.18, 'rgba(255,255,255,0.08)');
+      fog.addColorStop(0.55, 'rgba(255,255,255,0.00)');
+      fog.addColorStop(1.00, 'rgba(15,23,42,0.10)');
       for (let j = 0; j < f.cells.length; j++) {{
         ctx.fillStyle = f.cells[j];
-        ctx.globalAlpha = 0.78;
-        ctx.fillRect(x0 + j * cw, y0, cw + 1, h);
+        ctx.globalAlpha = 0.28;
+        ctx.fillRect(x0 + j * cw - 1, y0 + 4, cw + 3, h - 8);
+      }}
+      ctx.globalAlpha = 0.28;
+      ctx.fillStyle = fog;
+      ctx.fillRect(x0, y0, w, h);
+      ctx.globalAlpha = 0.10;
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 1;
+      for (let s = 0; s < 18; s++) {{
+        const yy = y0 + 8 + s * (h - 16) / 17;
+        ctx.beginPath();
+        ctx.moveTo(x0 + 18, yy);
+        ctx.lineTo(x0 + w - 18, yy);
+        ctx.stroke();
       }}
       ctx.globalAlpha = 1.0;
       ctx.restore();
       ctx.strokeStyle = '#6b7d92';
       ctx.lineWidth = 3;
       roundedRect(x0, y0, w, h, r);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,0.70)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x0 + 42, y0 + 9);
+      ctx.lineTo(x0 + w - 42, y0 + 9);
       ctx.stroke();
       ctx.strokeStyle = 'rgba(107,125,146,0.45)';
       ctx.lineWidth = 1;
@@ -220,8 +258,8 @@ def render_pipe(result, idx, particles):
       for (const p of f.dots) {{
         ctx.beginPath();
         ctx.fillStyle = p.c;
-        ctx.globalAlpha = 0.58;
-        ctx.arc(70 + p.x * 1060, 122 + p.y * 74, 4.2, 0, Math.PI * 2);
+        ctx.globalAlpha = p.a;
+        ctx.arc(70 + p.x * 1060, 122 + p.y * 74, p.r, 0, Math.PI * 2);
         ctx.fill();
       }}
       ctx.globalAlpha = 1.0;
