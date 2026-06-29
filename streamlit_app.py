@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 from pathlib import Path
 
 import matplotlib as mpl
@@ -100,7 +101,7 @@ def mix_color(h2, n2, air):
     return f"rgb({r},{g},{b})"
 
 
-def render_pipe(result, idx, particles):
+def pipe_html(result, idx, particles):
     prof = result.profiles[idx]
     metric = result.metrics[idx]
     cells = np.linspace(0, len(result.x_grid) - 1, 150, dtype=int)
@@ -119,7 +120,7 @@ def render_pipe(result, idx, particles):
         x = 5 + 90 * result.x_grid[k] / result.params.L
         y = 50 + rng.normal(0, 4.2) + (comp == "Air") * 5 * strat - (comp == "H2") * 8 * strat
         dots.append(f'<circle cx="{x:.2f}%" cy="{y:.2f}%" r="0.35%" fill="{COL[comp]}" opacity="0.58"/>')
-    html = f"""
+    return f"""
     <div style="border:1px solid #d4deea;border-radius:12px;background:#eef5fc;padding:16px">
     <div style="display:flex;justify-content:space-between;font-weight:700;color:#344054"><div>\u5165\u53e3<br><span style="font-weight:400">0 km</span></div><div>\u51fa\u53e3<br><span style="font-weight:400">12 km</span></div></div>
     <svg width="100%" viewBox="0 0 1200 310">
@@ -134,8 +135,31 @@ def render_pipe(result, idx, particles):
     <span>\u6df7\u6c14\u6bb5 {metric['mixed_length_m']:.0f} m</span><span>\u53ef\u71c3\u98ce\u9669\u6bb5 {metric['flammable_length_m']:.0f} m</span><span>\u6709\u6548 N2 {metric['effective_n2_length_m']:.0f} m</span><span>Fr {metric['Fr']:.2f}</span>
     </div></div>
     """
-    components.html(html, height=410)
+
+
+def show_pipe_frame(result, idx, particles):
+    components.html(pipe_html(result, idx, particles), height=410)
     st.caption("3D \u7ba1\u9053\u4e3a\u4e00\u7ef4\u6469\u5c14\u5206\u6570\u573a\u7684\u53ef\u89c6\u5316\u6620\u5c04\uff0c\u4e0d\u662f CFD \u6c42\u89e3\u7ed3\u679c\u3002")
+
+
+def render_pipe(result, idx, particles, autoplay=False):
+    if not autoplay:
+        show_pipe_frame(result, idx, particles)
+        return idx
+
+    holder = st.empty()
+    progress = st.progress(0, text="\u6b63\u5728\u64ad\u653e\u7f6e\u6362\u52a8\u753b...")
+    frames = list(range(0, len(result.times), 2))
+    if frames[-1] != len(result.times) - 1:
+        frames.append(len(result.times) - 1)
+    for n, frame in enumerate(frames):
+        with holder.container():
+            st.caption(f"\u52a8\u753b\u64ad\u653e\uff1a{result.times[frame] / 60:.1f} min")
+            show_pipe_frame(result, frame, particles)
+        progress.progress((n + 1) / len(frames), text="\u6b63\u5728\u64ad\u653e\u7f6e\u6362\u52a8\u753b...")
+        time.sleep(0.06)
+    progress.empty()
+    return frames[-1]
 
 
 def render_local_zoom(result, idx):
@@ -349,6 +373,7 @@ def main():
         st.sidebar.caption("\u6682\u65e0\u5916\u90e8 CFD/\u5206\u5c42\u590d\u6838\u7ed3\u679c")
         cfd_case = None
     run_clicked = st.sidebar.button(C["run"], type="primary")
+    play_clicked = st.sidebar.button("\u64ad\u653e\u52a8\u753b")
 
     if run_clicked or "result" not in st.session_state:
         with st.spinner("\u6b63\u5728\u8fd0\u884c\u4e00\u7ef4\u5bf9\u6d41-\u5f25\u6563\u6a21\u578b..."):
@@ -370,9 +395,9 @@ def main():
     idx = st.slider(C["time"], 0, len(result.times) - 1, max(0, len(result.times) // 2))
     st.caption(f"{result.times[idx]/60:.1f} min")
     st.subheader(C["pipe"])
-    render_pipe(result, idx, particles)
+    shown_idx = render_pipe(result, idx, particles, autoplay=(run_clicked or play_clicked))
     st.subheader(C["local"])
-    render_local_zoom(result, idx)
+    render_local_zoom(result, shown_idx)
     st.subheader(C["profiles"])
     render_curves(result, metrics_df)
     st.subheader(C["metrics"])
