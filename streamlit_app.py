@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import sys
-import time
 from pathlib import Path
 
 import matplotlib as mpl
@@ -64,9 +63,9 @@ C = {
     "profiles": "\u6d53\u5ea6\u66f2\u7ebf\u4e0e\u65f6\u5e8f\u6307\u6807",
     "metrics": "\u65f6\u5e8f\u6307\u6807",
     "task2": "\u4efb\u52a12\u4e2d\u65ad\u5de5\u51b5\u8bf4\u660e",
-    "cfd_input": "\u5916\u90e8 CFD \u8f93\u5165\u5305",
-    "cfd_result": "\u5916\u90e8 CFD / OpenFOAM \u6807\u91cf\u8f93\u8fd0 / \u5c40\u90e8\u5206\u5c42\u590d\u6838\u7ed3\u679c",
-    "no_cfd": "\u672a\u5bfc\u5165\u5916\u90e8 CFD/\u5c40\u90e8\u5206\u5c42\u590d\u6838\u7ed3\u679c\u3002\u5f53\u524d\u4e0d\u663e\u793a\u4e91\u56fe\uff0c\u907f\u514d\u5c06\u4e00\u7ef4\u53ef\u89c6\u5316\u8bef\u8ba4\u4e3a CFD\u3002",
+    "cfd_input": "\u5916\u90e8\u590d\u6838\u8f93\u5165\u5305\uff081D \u2192 CFD/\u5c40\u90e8\u6a21\u578b\uff09",
+    "cfd_result": "\u5c40\u90e8\u5206\u5c42\u590d\u6838\u7ed3\u679c\uff08OpenFOAM \u6807\u91cf\u8f93\u8fd0 + reduced x-z\uff09",
+    "no_cfd": "\u672a\u5bfc\u5165\u5c40\u90e8\u5206\u5c42\u590d\u6838\u7ed3\u679c\u3002\u5f53\u524d\u4e0d\u663e\u793a\u4e91\u56fe\uff0c\u907f\u514d\u5c06\u4e00\u7ef4\u53ef\u89c6\u5316\u8bef\u8ba4\u4e3a CFD\u3002",
     "mol": "\u6469\u5c14\u5206\u6570 / \u4f53\u79ef\u5206\u6570",
     "xpos": "\u7ba1\u9053\u4f4d\u7f6e x (km)",
     "length": "\u957f\u5ea6 (m)",
@@ -101,65 +100,163 @@ def mix_color(h2, n2, air):
     return f"rgb({r},{g},{b})"
 
 
-def pipe_html(result, idx, particles):
-    prof = result.profiles[idx]
-    metric = result.metrics[idx]
-    cells = np.linspace(0, len(result.x_grid) - 1, 150, dtype=int)
-    rects = []
-    for j, k in enumerate(cells):
-        h2, n2, air = prof[k]
-        rects.append(f'<rect x="{j/1.5:.3f}%" y="42%" width="0.75%" height="16%" fill="{mix_color(h2,n2,air)}" opacity="0.75"/>')
-    rng = np.random.default_rng(2026 + idx)
-    picks = rng.choice(len(prof), size=min(int(particles), 500), replace=True)
-    fr = float(metric.get("Fr", 3.0))
-    strat = max(0.0, min(1.0, (3.0 - fr) / 3.0))
-    dots = []
-    for k in picks:
-        h2, n2, air = prof[k]
-        comp = rng.choice(["H2", "N2", "Air"], p=np.array([h2, n2, air]) / max(h2 + n2 + air, 1e-12))
-        x = 5 + 90 * result.x_grid[k] / result.params.L
-        y = 50 + rng.normal(0, 4.2) + (comp == "Air") * 5 * strat - (comp == "H2") * 8 * strat
-        dots.append(f'<circle cx="{x:.2f}%" cy="{y:.2f}%" r="0.35%" fill="{COL[comp]}" opacity="0.58"/>')
-    return f"""
-    <div style="border:1px solid #d4deea;border-radius:12px;background:#eef5fc;padding:16px">
-    <div style="display:flex;justify-content:space-between;font-weight:700;color:#344054"><div>\u5165\u53e3<br><span style="font-weight:400">0 km</span></div><div>\u51fa\u53e3<br><span style="font-weight:400">12 km</span></div></div>
-    <svg width="100%" viewBox="0 0 1200 310">
-    <clipPath id="pipeClip"><rect x="70" y="120" width="1060" height="70" rx="35"/></clipPath>
-    <rect x="70" y="120" width="1060" height="70" rx="35" fill="#dfe8f2" stroke="#71839a" stroke-width="2"/>
-    <g clip-path="url(#pipeClip)" transform="translate(70 0) scale(10.6 1)">{''.join(rects)}</g>
-    <rect x="70" y="120" width="1060" height="70" rx="35" fill="none" stroke="#6b7d92" stroke-width="2"/>
-    <g>{''.join(dots)}</g>
-    </svg>
-    <div style="display:flex;gap:16px;flex-wrap:wrap;color:#344054">
-    <span><b style="color:{COL['H2']}">\u25a0</b> H2</span><span><b style="color:{COL['N2']}">\u25a0</b> N2</span><span><b style="color:{COL['Air']}">\u25a0</b> Air</span>
-    <span>\u6df7\u6c14\u6bb5 {metric['mixed_length_m']:.0f} m</span><span>\u53ef\u71c3\u98ce\u9669\u6bb5 {metric['flammable_length_m']:.0f} m</span><span>\u6709\u6548 N2 {metric['effective_n2_length_m']:.0f} m</span><span>Fr {metric['Fr']:.2f}</span>
-    </div></div>
+def pipe_frame_payload(result, particles):
+    cell_ids = np.linspace(0, len(result.x_grid) - 1, 160, dtype=int)
+    n_particles = min(int(particles), 520)
+    frames = []
+    for idx, prof in enumerate(result.profiles):
+        metric = result.metrics[idx]
+        cell_colors = [mix_color(*prof[k]) for k in cell_ids]
+        rng = np.random.default_rng(2026 + idx)
+        picks = rng.choice(len(prof), size=n_particles, replace=True)
+        fr = float(metric.get("Fr", 3.0))
+        strat = max(0.0, min(1.0, (3.0 - fr) / 3.0))
+        dots = []
+        for k in picks:
+            h2, n2, air = prof[k]
+            probs = np.array([h2, n2, air], dtype=float)
+            probs = probs / max(float(probs.sum()), 1.0e-12)
+            comp = rng.choice(["H2", "N2", "Air"], p=probs)
+            dots.append(
+                {
+                    "x": float(0.05 + 0.90 * result.x_grid[k] / result.params.L),
+                    "y": float(0.50 + rng.normal(0, 0.055) + (comp == "Air") * 0.070 * strat - (comp == "H2") * 0.105 * strat),
+                    "c": COL[comp],
+                }
+            )
+        frames.append(
+            {
+                "time": float(result.times[idx] / 60.0),
+                "cells": cell_colors,
+                "dots": dots,
+                "mixed": float(metric["mixed_length_m"]),
+                "flammable": float(metric["flammable_length_m"]),
+                "n2": float(metric["effective_n2_length_m"]),
+                "fr": float(metric["Fr"]),
+            }
+        )
+    return {"initial": int(len(result.times) // 2), "frames": frames}
+
+
+def render_pipe(result, idx, particles):
+    payload = pipe_frame_payload(result, particles)
+    payload["initial"] = int(idx)
+    data = json.dumps(payload, ensure_ascii=False)
+    html = f"""
+    <div id="app" style="font-family:Arial,'Microsoft YaHei',sans-serif;border:1px solid #d4deea;border-radius:12px;background:#eef5fc;padding:16px;color:#344054;">
+      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:18px;">
+        <div>\u5165\u53e3<br><span style="font-weight:400;font-size:15px;">0 km</span></div>
+        <div style="text-align:right;">\u51fa\u53e3<br><span style="font-weight:400;font-size:15px;">12 km</span></div>
+      </div>
+      <canvas id="pipeCanvas" width="1200" height="330" style="width:100%;height:330px;display:block;"></canvas>
+      <div style="display:flex;gap:12px;align-items:center;margin-top:8px;flex-wrap:wrap;">
+        <button id="playBtn" style="border:1px solid #b8c4d4;border-radius:7px;background:white;padding:7px 18px;cursor:pointer;">\u64ad\u653e</button>
+        <input id="frameSlider" type="range" min="0" max="0" value="0" step="1" style="flex:1;min-width:240px;">
+        <span id="timeLabel" style="font-weight:700;min-width:92px;"></span>
+      </div>
+      <div id="legend" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:15px;">
+        <span><b style="color:{COL['H2']}">\u25a0</b> H2</span>
+        <span><b style="color:{COL['N2']}">\u25a0</b> N2</span>
+        <span><b style="color:{COL['Air']}">\u25a0</b> Air</span>
+        <span id="metrics"></span>
+      </div>
+      <div style="font-size:13px;margin-top:8px;color:#667085;">3D \u7ba1\u9053\u4e3a\u4e00\u7ef4\u6469\u5c14\u5206\u6570\u573a\u7684\u53ef\u89c6\u5316\u6620\u5c04\uff0c\u4e0d\u662f CFD \u6c42\u89e3\u7ed3\u679c\u3002</div>
+    </div>
+    <script>
+    const payload = {data};
+    const frames = payload.frames;
+    const canvas = document.getElementById('pipeCanvas');
+    const ctx = canvas.getContext('2d');
+    const slider = document.getElementById('frameSlider');
+    const playBtn = document.getElementById('playBtn');
+    const timeLabel = document.getElementById('timeLabel');
+    const metrics = document.getElementById('metrics');
+    let frame = Math.max(0, Math.min(payload.initial, frames.length - 1));
+    let timer = null;
+    slider.max = frames.length - 1;
+    slider.value = frame;
+
+    function roundedRect(x, y, w, h, r) {{
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }}
+
+    function draw(i) {{
+      const f = frames[i];
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#eef5fc';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const x0 = 70, y0 = 122, w = 1060, h = 74, r = 37;
+      ctx.save();
+      roundedRect(x0, y0, w, h, r);
+      ctx.clip();
+      const cw = w / f.cells.length;
+      for (let j = 0; j < f.cells.length; j++) {{
+        ctx.fillStyle = f.cells[j];
+        ctx.globalAlpha = 0.78;
+        ctx.fillRect(x0 + j * cw, y0, cw + 1, h);
+      }}
+      ctx.globalAlpha = 1.0;
+      ctx.restore();
+      ctx.strokeStyle = '#6b7d92';
+      ctx.lineWidth = 3;
+      roundedRect(x0, y0, w, h, r);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(107,125,146,0.45)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x0 + 20, y0 + h + 22);
+      ctx.lineTo(x0 + w - 20, y0 + h + 22);
+      ctx.stroke();
+      for (const p of f.dots) {{
+        ctx.beginPath();
+        ctx.fillStyle = p.c;
+        ctx.globalAlpha = 0.58;
+        ctx.arc(70 + p.x * 1060, 122 + p.y * 74, 4.2, 0, Math.PI * 2);
+        ctx.fill();
+      }}
+      ctx.globalAlpha = 1.0;
+      timeLabel.textContent = f.time.toFixed(1) + ' min';
+      metrics.textContent = `\u6df7\u6c14\u6bb5 ${{f.mixed.toFixed(0)}} m | \u53ef\u71c3\u98ce\u9669\u6bb5 ${{f.flammable.toFixed(0)}} m | \u6709\u6548 N2 ${{f.n2.toFixed(0)}} m | Fr ${{f.fr.toFixed(2)}}`;
+      slider.value = i;
+    }}
+
+    function stop() {{
+      if (timer) clearInterval(timer);
+      timer = null;
+      playBtn.textContent = '\u64ad\u653e';
+    }}
+
+    function play() {{
+      stop();
+      playBtn.textContent = '\u6682\u505c';
+      timer = setInterval(() => {{
+        frame += 1;
+        if (frame >= frames.length) frame = 0;
+        draw(frame);
+      }}, 110);
+    }}
+
+    playBtn.onclick = () => timer ? stop() : play();
+    slider.oninput = (e) => {{
+      stop();
+      frame = parseInt(e.target.value, 10);
+      draw(frame);
+    }};
+    draw(frame);
+    </script>
     """
-
-
-def show_pipe_frame(result, idx, particles):
-    components.html(pipe_html(result, idx, particles), height=410)
-    st.caption("3D \u7ba1\u9053\u4e3a\u4e00\u7ef4\u6469\u5c14\u5206\u6570\u573a\u7684\u53ef\u89c6\u5316\u6620\u5c04\uff0c\u4e0d\u662f CFD \u6c42\u89e3\u7ed3\u679c\u3002")
-
-
-def render_pipe(result, idx, particles, autoplay=False):
-    if not autoplay:
-        show_pipe_frame(result, idx, particles)
-        return idx
-
-    holder = st.empty()
-    progress = st.progress(0, text="\u6b63\u5728\u64ad\u653e\u7f6e\u6362\u52a8\u753b...")
-    frames = list(range(0, len(result.times), 2))
-    if frames[-1] != len(result.times) - 1:
-        frames.append(len(result.times) - 1)
-    for n, frame in enumerate(frames):
-        with holder.container():
-            st.caption(f"\u52a8\u753b\u64ad\u653e\uff1a{result.times[frame] / 60:.1f} min")
-            show_pipe_frame(result, frame, particles)
-        progress.progress((n + 1) / len(frames), text="\u6b63\u5728\u64ad\u653e\u7f6e\u6362\u52a8\u753b...")
-        time.sleep(0.06)
-    progress.empty()
-    return frames[-1]
+    components.html(html, height=475)
+    return idx
 
 
 def render_local_zoom(result, idx):
@@ -240,11 +337,11 @@ def render_task2():
 
 def render_cfd_input():
     st.subheader(C["cfd_input"])
-    st.caption("\u8fd9\u91cc\u662f\u5916\u90e8 CFD \u521d\u59cb\u573a\uff0c\u4e0d\u662f CFD \u6c42\u89e3\u7ed3\u679c\u3002")
+    st.caption("\u8fd9\u91cc\u662f\u4ece\u4e00\u7ef4\u6a21\u578b\u5bfc\u51fa\u7684\u5c40\u90e8\u521d\u59cb\u573a\uff0c\u7528\u4e8e OpenFOAM/Fluent \u6216\u5c40\u90e8\u5206\u5c42\u6a21\u578b\u590d\u6838\uff0c\u4e0d\u662f CFD \u6c42\u89e3\u7ed3\u679c\u3002")
     base = ROOT / "cfd_cases"
     cases = sorted(p for p in base.iterdir() if p.is_dir()) if base.exists() else []
     if not cases:
-        st.info("\u6682\u65e0 CFD \u8f93\u5165\u5305\u3002")
+        st.info("\u6682\u65e0\u5916\u90e8\u590d\u6838\u8f93\u5165\u5305\u3002")
         return
     case_labels = [p.name for p in cases]
     case = base / st.selectbox(
@@ -280,7 +377,7 @@ def render_cfd_results(case_dir):
     if not metrics or missing:
         st.warning(C["no_cfd"])
         return
-    st.success("\u5df2\u8bfb\u53d6\u5916\u90e8\u590d\u6838\u7ed3\u679c\uff1a\u4e91\u56fe\u6765\u81ea outputs/cfd3d\uff0cVTU \u6765\u81ea OpenFOAM foamToVTK \u5bfc\u51fa\uff0c\u4e0d\u662f\u7f51\u9875\u4e34\u65f6\u4f2a\u9020\u3002")
+    st.success("\u5df2\u8bfb\u53d6\u5c40\u90e8\u590d\u6838\u7ed3\u679c\uff1a\u4e91\u56fe\u6765\u81ea reduced x-z \u5206\u5c42\u6a21\u578b\uff0cVTU \u6765\u81ea OpenFOAM scalarTransportFoam \u5bfc\u51fa\uff0c\u4e0d\u662f\u7f51\u9875\u4e34\u65f6\u4f2a\u9020\u3002")
     st.caption(f"case: {Path(case_dir).name}")
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("\u4e0a/\u4e0b\u534a\u7ba1 H2 \u5dee\u503c", f"{metrics.get('top_bottom_h2_delta', 0):.3f}")
@@ -350,6 +447,17 @@ def main():
     st.set_page_config(page_title=C["title"], layout="wide")
     st.title(C["title"])
     st.info(C["note"])
+    with st.expander("\u4eff\u771f\u67b6\u6784\u8bf4\u660e", expanded=False):
+        st.markdown(
+            "\n".join(
+                [
+                    "- **1D \u4e3b\u6a21\u578b**\uff1a\u8d1f\u8d23 12 km \u5168\u7ba1\u7f6e\u6362\u3001\u6df7\u6c14\u6bb5\u3001\u53ef\u71c3\u98ce\u9669\u6bb5\u548c\u6709\u6548 N2 \u9694\u79bb\u6bb5\u3002",
+                    "- **\u5c40\u90e8\u653e\u5927**\uff1a\u6765\u81ea 1D \u8ba1\u7b97\u7ed3\u679c\uff0c\u7528\u4e8e\u67e5\u770b H2/N2/Air \u754c\u9762\u3002",
+                    "- **\u5c40\u90e8\u5206\u5c42\u590d\u6838**\uff1a\u8bfb\u53d6 reduced x-z \u5206\u5c42\u6a21\u578b\u548c OpenFOAM scalarTransportFoam \u6807\u91cf\u8f93\u8fd0\u7ed3\u679c\uff0c\u4e0d\u7b49\u540c\u4e8e\u5b8c\u6574\u4e09\u7ef4\u591a\u7ec4\u5206\u91cd\u529b CFD\u3002",
+                    "- **3D \u7ba1\u9053\u52a8\u753b**\uff1a\u53ea\u662f\u5c06 1D \u6469\u5c14\u5206\u6570\u6620\u5c04\u5230\u7ba1\u9053\u753b\u9762\uff0c\u4fbf\u4e8e\u7b54\u8fa9\u5c55\u793a\u3002",
+                ]
+            )
+        )
     st.sidebar.header(C["input"])
     D = st.sidebar.number_input(C["diam"], min_value=0.7, max_value=1.4, value=1.2, step=0.1, format="%.2f")
     u = st.sidebar.number_input(C["vel"], min_value=1.0, max_value=15.0, value=7.0, step=1.0, format="%.2f")
@@ -364,16 +472,15 @@ def main():
     if cfd_cases:
         labels = ["\u4e0d\u663e\u793a\u5916\u90e8\u590d\u6838\u7ed3\u679c"] + [p.name for p in cfd_cases]
         chosen = st.sidebar.selectbox(
-            "\u5916\u90e8 CFD/\u5206\u5c42\u590d\u6838 case",
+            "\u5c40\u90e8\u5206\u5c42\u590d\u6838 case",
             labels,
             index=default_cfd_label_index(labels),
         )
         cfd_case = None if chosen == labels[0] else cfd_cases[labels.index(chosen) - 1]
     else:
-        st.sidebar.caption("\u6682\u65e0\u5916\u90e8 CFD/\u5206\u5c42\u590d\u6838\u7ed3\u679c")
+        st.sidebar.caption("\u6682\u65e0\u5c40\u90e8\u5206\u5c42\u590d\u6838\u7ed3\u679c")
         cfd_case = None
     run_clicked = st.sidebar.button(C["run"], type="primary")
-    play_clicked = st.sidebar.button("\u64ad\u653e\u52a8\u753b")
 
     if run_clicked or "result" not in st.session_state:
         with st.spinner("\u6b63\u5728\u8fd0\u884c\u4e00\u7ef4\u5bf9\u6d41-\u5f25\u6563\u6a21\u578b..."):
@@ -395,7 +502,7 @@ def main():
     idx = st.slider(C["time"], 0, len(result.times) - 1, max(0, len(result.times) // 2))
     st.caption(f"{result.times[idx]/60:.1f} min")
     st.subheader(C["pipe"])
-    shown_idx = render_pipe(result, idx, particles, autoplay=(run_clicked or play_clicked))
+    shown_idx = render_pipe(result, idx, particles)
     st.subheader(C["local"])
     render_local_zoom(result, shown_idx)
     st.subheader(C["profiles"])
