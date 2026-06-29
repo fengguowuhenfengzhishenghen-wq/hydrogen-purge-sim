@@ -1,0 +1,13 @@
+D_m,u_mps,p_back_MPa,Fr,dp_over_p_back,breakthrough_time_s,dp_feasible,recommended_flag,recommendation_basis
+0.7,5.0,0.1,1.9784418137393804,0.03968473798655548,2376.0,True,False,max Fr subject to dp/p_back < 0.1
+0.7,7.0,0.1,2.7698185392351324,0.07378783191784415,1697.142857142857,True,True,max Fr subject to dp/p_back < 0.1
+0.7,9.0,0.1,3.561195264730885,0.1176387793399955,1320.0,False,False,max Fr subject to dp/p_back < 0.1
+1.0,5.0,0.1,1.6552831803793144,0.02590902514218965,2376.0,True,False,max Fr subject to dp/p_back < 0.1
+1.0,7.0,0.1,2.3173964525310407,0.0482423000699963,1697.142857142857,True,False,max Fr subject to dp/p_back < 0.1
+1.0,9.0,0.1,2.979509724682767,0.07698016810410985,1320.0,True,True,max Fr subject to dp/p_back < 0.1
+1.2,5.0,0.1,1.511059894921072,0.020854556096036387,2376.0,True,False,max Fr subject to dp/p_back < 0.1
+1.2,7.0,0.1,2.115483852889501,0.038857788658238274,1697.142857142857,True,False,max Fr subject to dp/p_back < 0.1
+1.2,9.0,0.1,2.7199078108579298,0.06203217221002286,1320.0,True,True,max Fr subject to dp/p_back < 0.1
+1.4,5.0,0.1,1.3989696226781287,0.01736671614122271,2376.0,True,False,max Fr subject to dp/p_back < 0.1
+1.4,7.0,0.1,1.9585574717493794,0.032377363114916395,1697.142857142857,True,False,max Fr subject to dp/p_back < 0.1
+1.4,9.0,0.1,2.5181453208206324,0.0517052977119156,1320.0,True,True,max Fr subject to dp/p_back < 0.1

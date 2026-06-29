@@ -1,0 +1,2 @@
+species_sum_max_error_representative,balance_error_H2_m,balance_error_N2_m,balance_error_Air_m,balance_error_max_abs_m,erfc_L2_error,erfc_Linf_error,grid_rows,beta_sensitivity_rows,scaling_note
+2.220446049250313e-16,-9.094947017729282e-12,-1.1368683772161603e-13,6.366462912410498e-12,9.094947017729282e-12,0.003215380854783772,0.016384989073632117,3,3,C:\Users\陈雨婷\Desktop\ppt\hydrogen_purge_sim\outputs\validation\scaling_check.md

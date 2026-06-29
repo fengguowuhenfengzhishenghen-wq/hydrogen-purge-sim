@@ -1,0 +1,42 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+pytest-cache-files-*/
+pytest-of-*/
+.tmp_pytest/
+.streamlit_home/
+.mplconfig/
+*.log
+*.err.log
+*.out.log
+encoding_test.txt
+
+# Local virtual environments
+.venv/
+venv/
+env/
+
+# Large/local solver scratch that can be regenerated
+openfoam_cases/**/[0-9]*/
+openfoam_cases/**/VTK/
+openfoam_cases/**/postProcessing/
+openfoam_cases/**/processor*/
+openfoam_cases/**/constant/polyMesh/
+openfoam_cases/**/log.*
+cfd_cases/**/initial_field_points.vtk
+
+# Keep source outputs needed by the Streamlit demo
+!outputs/
+!outputs/**
+!cfd_cases/
+!cfd_cases/**
+!openfoam_cases/
+!openfoam_cases/**/README*
+!openfoam_cases/**/*_scalarTransport/0/
+!openfoam_cases/**/*_scalarTransport/constant/
+!openfoam_cases/**/*_scalarTransport/system/
+
+# Final overrides for files that should not be uploaded.
+cfd_cases/**/initial_field_points.vtk
+openfoam_cases/**/constant/polyMesh/
+openfoam_cases/**/log.*

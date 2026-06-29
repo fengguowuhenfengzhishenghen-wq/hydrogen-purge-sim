@@ -1,0 +1,4 @@
+beta_K,D_m,u_mps,K_m2_s,sigma_m,two_interface_1_99_estimate_m,mixed_length_max_m,relative_error_vs_9p3sigma,note
+0.2,1.2,7.0,1.6800780000000002,75.8946638440411,705.8203737495824,720.0,0.020089567796251265,beta sensitivity for Taylor-Aris/Austin-Palfrey style engineering calibration
+0.5,1.2,7.0,4.200078,120.0,1116.0,1080.0,0.03225806451612903,beta sensitivity for Taylor-Aris/Austin-Palfrey style engineering calibration
+0.8,1.2,7.0,6.720078000000001,151.7893276880822,1411.6407474991647,1360.0,0.03658207485909603,beta sensitivity for Taylor-Aris/Austin-Palfrey style engineering calibration

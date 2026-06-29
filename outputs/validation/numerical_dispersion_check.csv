@@ -1,0 +1,2 @@
+u_mps,dx_m,CFL,D_num_upper_m2_s,K_physical_m2_s,D_num_over_K,note
+7.0,10.0,0.45,19.25,4.200078,4.583248215866467,Use smaller dx or higher-order settings if this ratio approaches or exceeds 1.

@@ -1,0 +1,2 @@
+case,L2_error,Linf_error,dx_m,u_mps,K_m2_s,t_s
+single_interface_erfc,0.003215380854783772,0.016384989073632117,10.0,1.0,5.0,300.0

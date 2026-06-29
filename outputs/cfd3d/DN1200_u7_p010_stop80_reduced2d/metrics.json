@@ -1,0 +1,15 @@
+{
+  "solver": "Python reduced 2D x-z stratification model (not Fluent/OpenFOAM 3D CFD)",
+  "case_name": "DN1200_u7_p010_stop80_reduced2d",
+  "source_case": "DN1200_u7_p010_stop80",
+  "D_m": 1.2,
+  "local_length_m": 1200.0,
+  "stop_duration_s": 300.0,
+  "mesh_cells": 19521,
+  "top_bottom_h2_delta": 0.08519249564186045,
+  "top_h2_max": 0.9477174249296384,
+  "flammable_area_ratio": 0.0,
+  "flammable_volume_ratio": 0.0,
+  "compute_time_s": null,
+  "note": "Reduced local stratification result generated from the 1D stop profile. It is a solved x-z verification model, not a full 3D CFD replacement."
+}
