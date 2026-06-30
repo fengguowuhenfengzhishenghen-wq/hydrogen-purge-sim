@@ -1,0 +1,21 @@
+{
+  "status": "prepared_input_not_solved",
+  "case_name": "DN1200_u7_p010_stop80_rhoReacting3D",
+  "source_case": "DN1200_u7_p010_stop80",
+  "source_window": "full_isolation_zone_1200m",
+  "target_solver_family": "OpenFOAM rhoReactingFoam/reactingFoam or Fluent species transport",
+  "mesh_type": "external circular-pipe 3D mesh required for final solve",
+  "local_length_m": 1200.0,
+  "D_m": 1.2,
+  "sample_points": 11664,
+  "nx": 81,
+  "nr": 6,
+  "ntheta": 24,
+  "mole_sum_max_error": 2.220446049250313e-16,
+  "mass_sum_max_error": 2.220446049250313e-16,
+  "x_h2_max": 0.8424175358814747,
+  "x_o2_max": 0.1792519881931185,
+  "y_h2_max": 0.2778320886124987,
+  "y_o2_max": 0.19965801668107436,
+  "note": "Prepared offline 3D multi-species CFD initial package; not solved CFD output."
+}

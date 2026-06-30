@@ -21,7 +21,13 @@ import streamlit.components.v1 as components
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from h2purge.cfd_import import find_cfd_volume_file, list_cfd_cases, load_cfd_images, load_cfd_metrics
+from h2purge.cfd_import import (
+    find_cfd_volume_file,
+    list_cfd_cases,
+    list_prepared_3d_cases,
+    load_cfd_images,
+    load_cfd_metrics,
+)
 from h2purge.config import SimulationParams
 from h2purge.solver_fvm import run_simulation
 
@@ -103,29 +109,42 @@ def mix_color(h2, n2, air):
 def pipe_frame_payload(result, particles):
     cell_ids = np.linspace(0, len(result.x_grid) - 1, 160, dtype=int)
     n_particles = min(int(particles), 520)
+    rng = np.random.default_rng(2026)
+    particle_x = rng.uniform(0.05, 0.95, n_particles)
+    particle_y = np.clip(0.50 + rng.normal(0.0, 0.16, n_particles), 0.20, 0.80)
+    particle_q = rng.uniform(0.0, 1.0, n_particles)
+    particle_r = rng.uniform(1.7, 3.1, n_particles)
+    particle_a = rng.uniform(0.24, 0.44, n_particles)
+    particle_phase = rng.uniform(0.0, 2.0 * np.pi, n_particles)
     frames = []
     for idx, prof in enumerate(result.profiles):
         metric = result.metrics[idx]
         cell_colors = [mix_color(*prof[k]) for k in cell_ids]
-        rng = np.random.default_rng(2026 + idx)
-        picks = rng.choice(len(prof), size=n_particles, replace=True)
         fr = float(metric.get("Fr", 3.0))
         strat = max(0.0, min(1.0, (3.0 - fr) / 3.0))
         dots = []
-        for k in picks:
+        drift = 0.010 * np.sin(0.16 * idx + particle_phase)
+        x_now = np.clip(particle_x + drift, 0.05, 0.95)
+        y_now = np.clip(particle_y + 0.025 * np.sin(0.21 * idx + particle_phase), 0.18, 0.82)
+        picks = np.clip(((x_now - 0.05) / 0.90 * (len(prof) - 1)).astype(int), 0, len(prof) - 1)
+        for j, k in enumerate(picks):
             h2, n2, air = prof[k]
-            probs = np.array([h2, n2, air], dtype=float)
-            probs = probs / max(float(probs.sum()), 1.0e-12)
-            comp = rng.choice(["H2", "N2", "Air"], p=probs)
-            y = 0.50 + rng.normal(0, 0.17) + (comp == "Air") * 0.070 * strat - (comp == "H2") * 0.105 * strat
+            q = particle_q[j]
+            if q <= h2:
+                comp = "H2"
+            elif q <= h2 + n2:
+                comp = "N2"
+            else:
+                comp = "Air"
+            y = y_now[j] + (comp == "Air") * 0.070 * strat - (comp == "H2") * 0.105 * strat
             y = float(np.clip(y, 0.18, 0.82))
             dots.append(
                 {
-                    "x": float(0.05 + 0.90 * result.x_grid[k] / result.params.L),
+                    "x": float(x_now[j]),
                     "y": y,
                     "c": COL[comp],
-                    "r": float(rng.uniform(1.6, 3.3)),
-                    "a": float(rng.uniform(0.22, 0.48)),
+                    "r": float(particle_r[j]),
+                    "a": float(particle_a[j]),
                 }
             )
         frames.append(
@@ -213,25 +232,26 @@ def render_pipe(result, idx, particles):
       ctx.save();
       roundedRect(x0, y0, w, h, r);
       ctx.clip();
-      const cw = w / f.cells.length;
+      const gasGrad = ctx.createLinearGradient(x0, y0, x0 + w, y0);
+      for (let j = 0; j < f.cells.length; j++) {{
+        gasGrad.addColorStop(j / Math.max(1, f.cells.length - 1), f.cells[j]);
+      }}
       const fog = ctx.createLinearGradient(x0, y0, x0, y0 + h);
       fog.addColorStop(0.00, 'rgba(255,255,255,0.50)');
       fog.addColorStop(0.18, 'rgba(255,255,255,0.08)');
       fog.addColorStop(0.55, 'rgba(255,255,255,0.00)');
       fog.addColorStop(1.00, 'rgba(15,23,42,0.10)');
-      for (let j = 0; j < f.cells.length; j++) {{
-        ctx.fillStyle = f.cells[j];
-        ctx.globalAlpha = 0.28;
-        ctx.fillRect(x0 + j * cw - 1, y0 + 4, cw + 3, h - 8);
-      }}
-      ctx.globalAlpha = 0.28;
+      ctx.globalAlpha = 0.30;
+      ctx.fillStyle = gasGrad;
+      ctx.fillRect(x0, y0 + 4, w, h - 8);
+      ctx.globalAlpha = 0.34;
       ctx.fillStyle = fog;
       ctx.fillRect(x0, y0, w, h);
-      ctx.globalAlpha = 0.10;
+      ctx.globalAlpha = 0.06;
       ctx.strokeStyle = '#e2e8f0';
       ctx.lineWidth = 1;
-      for (let s = 0; s < 18; s++) {{
-        const yy = y0 + 8 + s * (h - 16) / 17;
+      for (let s = 0; s < 10; s++) {{
+        const yy = y0 + 8 + s * (h - 16) / 9;
         ctx.beginPath();
         ctx.moveTo(x0 + 18, yy);
         ctx.lineTo(x0 + w - 18, yy);
@@ -281,7 +301,7 @@ def render_pipe(result, idx, particles):
         frame += 1;
         if (frame >= frames.length) frame = 0;
         draw(frame);
-      }}, 110);
+      }}, 180);
     }}
 
     playBtn.onclick = () => timer ? stop() : play();
@@ -402,6 +422,45 @@ def render_cfd_input():
         cols = st.columns(min(3, len(previews)))
         for i, (name, p) in enumerate(previews):
             cols[i % len(cols)].image(str(p), caption=name)
+
+
+def render_prepared_3d_cases():
+    st.subheader("\u79bb\u7ebf\u4e09\u7ef4 CFD \u5de5\u7a0b\u5305")
+    cases = list_prepared_3d_cases(ROOT / "openfoam_cases")
+    if not cases:
+        st.info("\u6682\u65e0\u79bb\u7ebf\u4e09\u7ef4 CFD \u5de5\u7a0b\u5305\u3002")
+        return
+    case = cases[0]
+    if len(cases) > 1:
+        labels = [p.name for p in cases]
+        chosen = st.selectbox("\u9009\u62e9\u4e09\u7ef4\u5de5\u7a0b\u5305", labels, index=default_cfd_label_index([""] + labels) - 1)
+        case = cases[labels.index(chosen)]
+    metrics_path = case / "metrics.json"
+    metrics = json.loads(metrics_path.read_text(encoding="utf-8")) if metrics_path.exists() else {}
+    st.warning("\u8fd9\u662f\u79bb\u7ebf\u4e09\u7ef4 CFD \u521d\u59cb\u573a/\u5de5\u7a0b\u5305\uff0c\u4e0d\u662f\u5df2\u6c42\u89e3\u7684 CFD \u7ed3\u679c\u3002\u8dd1\u5b8c Fluent/OpenFOAM \u540e\uff0c\u518d\u5c06\u7ed3\u679c\u5bfc\u5165 outputs/cfd3d\u3002")
+    st.caption(f"case: {case.name}")
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("\u4e09\u7ef4\u91c7\u6837\u70b9", f"{int(metrics.get('sample_points', 0))}")
+    c2.metric("\u5c40\u90e8\u7a97\u53e3", f"{metrics.get('local_length_m', 0):.0f} m")
+    c3.metric("\u6469\u5c14\u548c\u8bef\u5dee", f"{metrics.get('mole_sum_max_error', 0):.1e}")
+    c4.metric("\u8d28\u91cf\u548c\u8bef\u5dee", f"{metrics.get('mass_sum_max_error', 0):.1e}")
+    c5, c6, c7 = st.columns(3)
+    c5.metric("max x_H2", f"{metrics.get('x_h2_max', 0):.3f}")
+    c6.metric("max Y_H2", f"{metrics.get('y_h2_max', 0):.3f}")
+    c7.metric("max x_O2", f"{metrics.get('x_o2_max', 0):.3f}")
+    preview = case / "initial_3d_preview.png"
+    if preview.exists():
+        st.image(str(preview), caption="\u4e09\u7ef4\u521d\u59cb H2 \u6469\u5c14\u5206\u6570\u9884\u89c8")
+    downloads = [
+        ("initial_3d_samples.csv", "text/csv"),
+        ("initial_3d_points.vtk", "application/octet-stream"),
+        ("openfoam_solver_notes.md", "text/markdown"),
+    ]
+    cols = st.columns(len(downloads))
+    for col, (name, mime) in zip(cols, downloads):
+        path = case / name
+        if path.exists():
+            col.download_button(name, path.read_bytes(), file_name=name, mime=mime)
 
 
 def render_cfd_results(case_dir):
@@ -595,6 +654,7 @@ def main():
         render_task2()
     elif page == "CFD \u590d\u6838":
         render_cfd_input()
+        render_prepared_3d_cases()
         render_cfd_results(cfd_case)
     else:
         render_architecture_note()

@@ -28,6 +28,15 @@ def list_cfd_cases(base_dir: str | Path = "outputs/cfd3d") -> list[Path]:
     return sorted(path for path in base.iterdir() if path.is_dir())
 
 
+def list_prepared_3d_cases(base_dir: str | Path = "openfoam_cases") -> list[Path]:
+    """Return prepared offline 3D CFD case-package directories."""
+
+    base = Path(base_dir)
+    if not base.exists() or not base.is_dir():
+        return []
+    return sorted(path for path in base.glob("*_rhoReacting3D") if path.is_dir())
+
+
 def load_cfd_metrics(case_dir: str | Path) -> dict[str, Any]:
     """Load metrics.json from a local CFD/review case directory."""
 
