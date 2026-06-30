@@ -38,6 +38,9 @@ def font_setup() -> None:
         r"C:\Windows\Fonts\msyhbd.ttc",
         r"C:\Windows\Fonts\simhei.ttf",
         r"C:\Windows\Fonts\simsun.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
     ]:
         p = Path(name)
         if p.exists():
@@ -72,9 +75,9 @@ C = {
     "cfd_input": "\u5916\u90e8\u590d\u6838\u8f93\u5165\u5305\uff081D \u2192 CFD/\u5c40\u90e8\u6a21\u578b\uff09",
     "cfd_result": "\u5c40\u90e8\u5206\u5c42\u590d\u6838\u7ed3\u679c\uff08\u5c40\u90e8\u4e8c\u7ef4\u6d6e\u5347 CFD / OpenFOAM \u6807\u91cf\u590d\u6838\uff09",
     "no_cfd": "\u672a\u5bfc\u5165\u5c40\u90e8\u5206\u5c42\u590d\u6838\u7ed3\u679c\u3002\u5f53\u524d\u4e0d\u663e\u793a\u4e91\u56fe\uff0c\u907f\u514d\u5c06\u4e00\u7ef4\u53ef\u89c6\u5316\u8bef\u8ba4\u4e3a CFD\u3002",
-    "mol": "\u6469\u5c14\u5206\u6570 / \u4f53\u79ef\u5206\u6570",
-    "xpos": "\u7ba1\u9053\u4f4d\u7f6e x (km)",
-    "length": "\u957f\u5ea6 (m)",
+    "mol": "Mole fraction / volume fraction",
+    "xpos": "Pipe position x (km)",
+    "length": "Length (m)",
     "download": "\u4e0b\u8f7d\u5f53\u524d\u7b97\u4f8b CSV",
 }
 
@@ -136,10 +139,10 @@ def render_curves(result, metrics_df):
         st.pyplot(fig)
     with b:
         fig, ax = plt.subplots(figsize=(8, 4.8))
-        ax.plot(metrics_df["time_s"] / 60, metrics_df["mixed_length_m"], label="\u6df7\u6c14\u6bb5\u957f\u5ea6")
-        ax.plot(metrics_df["time_s"] / 60, metrics_df["flammable_length_m"], label="\u53ef\u71c3\u98ce\u9669\u6bb5")
-        ax.plot(metrics_df["time_s"] / 60, metrics_df["effective_n2_length_m"], label="\u6709\u6548 N2 \u9694\u79bb\u6bb5")
-        ax.set_xlabel("\u65f6\u95f4 (min)")
+        ax.plot(metrics_df["time_s"] / 60, metrics_df["mixed_length_m"], label="Mixed length")
+        ax.plot(metrics_df["time_s"] / 60, metrics_df["flammable_length_m"], label="Flammable length")
+        ax.plot(metrics_df["time_s"] / 60, metrics_df["effective_n2_length_m"], label="Effective N2 length")
+        ax.set_xlabel("Time (min)")
         ax.set_ylabel(C["length"])
         ax.grid(True, alpha=0.25)
         ax.legend()
