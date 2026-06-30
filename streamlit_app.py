@@ -55,7 +55,7 @@ font_setup()
 
 C = {
     "title": "\u8f93\u6c22\u7ba1\u9053\u6295\u4ea7\u6df7\u6c14\u89c4\u5f8b\u6a21\u62df",
-    "note": "\u672c\u7f51\u9875\u5c55\u793a\u4e00\u7ef4\u8f74\u5411\u5bf9\u6d41-\u5f25\u6563\u6a21\u578b\u7ed3\u679c\u30023D \u7ba1\u9053\u4e3a\u6469\u5c14\u5206\u6570\u573a\u53ef\u89c6\u5316\u6620\u5c04\uff0c\u4e0d\u4ee3\u8868\u4e09\u7ef4 CFD \u6c42\u89e3\u3002",
+    "note": "\u7ed3\u679c\u6f14\u793a\u754c\u9762\uff1b\u6a21\u578b\u5047\u8bbe\u548c\u9002\u7528\u8fb9\u754c\u89c1\u62a5\u544a\u3002",
     "input": "\u8f93\u5165\u53c2\u6570",
     "diam": "\u7ba1\u5f84 D (m)",
     "vel": "\u7f6e\u6362\u901f\u5ea6 u (m/s)",
@@ -72,9 +72,9 @@ C = {
     "profiles": "\u6d53\u5ea6\u66f2\u7ebf\u4e0e\u65f6\u5e8f\u6307\u6807",
     "metrics": "\u65f6\u5e8f\u6307\u6807",
     "task2": "\u4efb\u52a12\u4e2d\u65ad\u5de5\u51b5\u8bf4\u660e",
-    "cfd_input": "\u5916\u90e8\u590d\u6838\u8f93\u5165\u5305\uff081D \u2192 CFD/\u5c40\u90e8\u6a21\u578b\uff09",
-    "cfd_result": "\u5c40\u90e8\u5206\u5c42\u590d\u6838\u7ed3\u679c\uff08\u5c40\u90e8\u4e8c\u7ef4\u6d6e\u5347 CFD / OpenFOAM \u6807\u91cf\u590d\u6838\uff09",
-    "no_cfd": "\u672a\u5bfc\u5165\u5c40\u90e8\u5206\u5c42\u590d\u6838\u7ed3\u679c\u3002\u5f53\u524d\u4e0d\u663e\u793a\u4e91\u56fe\uff0c\u907f\u514d\u5c06\u4e00\u7ef4\u53ef\u89c6\u5316\u8bef\u8ba4\u4e3a CFD\u3002",
+    "cfd_input": "\u5206\u5c42\u590d\u6838\u8f93\u5165\u5305\uff08\u6765\u81ea\u4e00\u7ef4\u6a21\u578b\uff09",
+    "cfd_result": "\u5c40\u90e8\u5206\u5c42\u590d\u6838\u7ed3\u679c",
+    "no_cfd": "\u672a\u5bfc\u5165\u5c40\u90e8\u5206\u5c42\u590d\u6838\u7ed3\u679c\u3002\u5f53\u524d\u4e0d\u663e\u793a\u590d\u6838\u56fe\uff0c\u907f\u514d\u5c06\u4e00\u7ef4\u53ef\u89c6\u5316\u8bef\u8ba4\u4e3a\u590d\u6838\u7ed3\u679c\u3002",
     "mol": "Mole fraction / volume fraction",
     "xpos": "Pipe position x (km)",
     "length": "Length (m)",
@@ -168,18 +168,30 @@ def render_task2():
     })
     st.dataframe(view, width="stretch", hide_index=True)
     st.warning("5 min \u5185\u8f74\u5411\u6df7\u6c14\u6bb5\u589e\u957f\u4e3a 0 m \u4e0d\u4ee3\u8868\u505c\u8f93\u5b89\u5168\uff1b\u505c\u8f93\u65f6 Fr=0\uff0c\u6c34\u5e73\u7ba1\u5185\u5206\u5c42\u98ce\u9669\u589e\u5f3a\u3002")
-    cols = st.columns(2)
-    for col, img, cap in [
-        (cols[0], ROOT / "outputs" / "task2" / "effective_n2_after_interrupt.png", "\u6709\u6548 N2 \u9694\u79bb\u6bb5"),
-        (cols[1], ROOT / "outputs" / "task2" / "mixed_length_growth_interrupt.png", "\u8f74\u5411\u6df7\u6c14\u6bb5\u589e\u957f\u89e3\u91ca"),
-    ]:
-        if img.exists():
-            col.image(str(img), caption=cap)
+    cols = st.columns(3)
+    for col, (_, row) in zip(cols, df.iterrows()):
+        label = f"\u4e2d\u65ad {row['interrupt_position_fraction']:.0%}"
+        col.metric(label, f"{row['effective_n2_after_300s_m']:.0f} m", help="\u505c\u8f93 300 s \u540e\u7684\u6709\u6548 N2 \u9694\u79bb\u6bb5\u957f\u5ea6")
+        col.caption(
+            f"\u8f74\u5411\u589e\u957f {row['mixed_length_growth_m']:.0f} m\uff1b"
+            f"\u91cd\u529b\u6d41\u4f30\u7b97 {row['shutdown_gravity_intrusion_estimate_m']:.0f} m"
+        )
+    fig, ax = plt.subplots(figsize=(8.5, 3.6))
+    labels = [f"{v:.0%}" for v in df["interrupt_position_fraction"]]
+    ax.bar(labels, df["effective_n2_after_300s_m"], color="#2563eb", label="Effective N2 after 300 s")
+    ax.plot(labels, df["shutdown_gravity_intrusion_estimate_m"], color="#ef4444", marker="o", label="Gravity-current estimate")
+    ax.set_xlabel("Shutdown position")
+    ax.set_ylabel("Length (m)")
+    ax.set_title("Task 2 shutdown risk indicators")
+    ax.grid(axis="y", alpha=0.25)
+    ax.legend()
+    st.pyplot(fig)
+    st.caption("\u4e0a\u56fe\u4e3a\u7f51\u9875\u6839\u636e CSV \u6570\u636e\u91cd\u7ed8\uff0c\u4e0d\u518d\u5c55\u793a\u542b\u5b57\u4f53\u635f\u574f\u98ce\u9669\u7684\u9759\u6001 PNG\u3002")
 
 
 def render_cfd_input():
     st.subheader(C["cfd_input"])
-    st.caption("\u8fd9\u91cc\u662f\u4ece\u4e00\u7ef4\u6a21\u578b\u5bfc\u51fa\u7684\u5c40\u90e8\u521d\u59cb\u573a\uff0c\u7528\u4e8e\u5c40\u90e8\u4e8c\u7ef4\u6d6e\u5347 CFD\u3001OpenFOAM/Fluent \u6216\u5176\u4ed6\u590d\u6838\u6d41\u7a0b\uff1b\u672c\u8f93\u5165\u5305\u672c\u8eab\u4e0d\u662f\u6c42\u89e3\u7ed3\u679c\u3002")
+    st.caption("\u8fd9\u91cc\u662f\u4ece\u4e00\u7ef4\u6a21\u578b\u5bfc\u51fa\u7684\u5c40\u90e8\u521d\u59cb\u573a\uff0c\u7528\u4e8e OpenFOAM/Fluent \u6216\u5c40\u90e8\u5206\u5c42\u590d\u6838\u6d41\u7a0b\uff1b\u8f93\u5165\u5305\u672c\u8eab\u4e0d\u662f\u6c42\u89e3\u7ed3\u679c\u3002")
     base = ROOT / "cfd_cases"
     cases = sorted(p for p in base.iterdir() if p.is_dir()) if base.exists() else []
     if not cases:
@@ -209,19 +221,19 @@ def render_cfd_input():
 
 
 def render_prepared_3d_cases():
-    st.subheader("\u79bb\u7ebf\u4e09\u7ef4 CFD \u5de5\u7a0b\u5305")
+    st.subheader("\u79bb\u7ebf\u4e09\u7ef4\u590d\u6838\u5de5\u7a0b\u5305")
     cases = list_prepared_3d_cases(ROOT / "openfoam_cases")
     if not cases:
-        st.info("\u6682\u65e0\u79bb\u7ebf\u4e09\u7ef4 CFD \u5de5\u7a0b\u5305\u3002")
+        st.info("\u6682\u65e0\u79bb\u7ebf\u4e09\u7ef4\u590d\u6838\u5de5\u7a0b\u5305\u3002")
         return
     case = cases[0]
     if len(cases) > 1:
         labels = [p.name for p in cases]
-        chosen = st.selectbox("\u9009\u62e9\u4e09\u7ef4\u5de5\u7a0b\u5305", labels, index=default_cfd_label_index([""] + labels) - 1)
+        chosen = st.selectbox("\u9009\u62e9\u4e09\u7ef4\u590d\u6838\u5de5\u7a0b\u5305", labels, index=default_cfd_label_index([""] + labels) - 1)
         case = cases[labels.index(chosen)]
     metrics_path = case / "metrics.json"
     metrics = json.loads(metrics_path.read_text(encoding="utf-8")) if metrics_path.exists() else {}
-    st.warning("\u8fd9\u662f\u79bb\u7ebf\u4e09\u7ef4 CFD \u521d\u59cb\u573a/\u5de5\u7a0b\u5305\uff0c\u4e0d\u662f\u5df2\u6c42\u89e3\u7684 CFD \u7ed3\u679c\u3002\u8dd1\u5b8c Fluent/OpenFOAM \u540e\uff0c\u518d\u5c06\u7ed3\u679c\u5bfc\u5165 outputs/cfd3d\u3002")
+    st.warning("\u8fd9\u662f\u79bb\u7ebf\u4e09\u7ef4\u521d\u59cb\u573a/\u5de5\u7a0b\u5305\uff0c\u4e0d\u662f\u5df2\u6c42\u89e3\u7ed3\u679c\u3002\u8dd1\u5b8c Fluent/OpenFOAM \u540e\uff0c\u518d\u5c06\u7ed3\u679c\u5bfc\u5165 outputs/cfd3d\u3002")
     st.caption(f"case: {case.name}")
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("\u4e09\u7ef4\u91c7\u6837\u70b9", f"{int(metrics.get('sample_points', 0))}")
@@ -260,9 +272,9 @@ def render_cfd_results(case_dir):
         return
     solver = str(metrics.get("solver", ""))
     if "low-Mach buoyant" in solver:
-        st.success("\u5df2\u8bfb\u53d6\u5c40\u90e8\u4e8c\u7ef4\u6d6e\u5347 CFD \u7ed3\u679c\uff1a\u5df2\u6c42\u89e3\u52a8\u91cf\u3001\u6d6e\u529b\u548c H2/N2/Air \u7ec4\u5206\u8f93\u8fd0\uff1b\u5b83\u4e0d\u662f\u5b8c\u6574\u4e09\u7ef4\u53ef\u538b\u7f29 CFD\u3002")
+        st.success("\u5df2\u8bfb\u53d6\u5c40\u90e8\u4e8c\u7ef4\u5206\u5c42\u590d\u6838\u7ed3\u679c\uff1a\u6a21\u578b\u5305\u542b\u6d6e\u529b\u9a71\u52a8\u548c H2/N2/Air \u7ec4\u5206\u8f93\u8fd0\uff0c\u7528\u4e8e\u63d0\u793a\u505c\u8f93\u5206\u5c42\u98ce\u9669\u3002")
     else:
-        st.success("\u5df2\u8bfb\u53d6\u5c40\u90e8\u590d\u6838\u7ed3\u679c\uff1a\u4e91\u56fe\u6765\u81ea\u5916\u90e8\u6216\u5c40\u90e8\u590d\u6838\u6d41\u7a0b\uff0c\u4e0d\u662f\u7f51\u9875\u4e34\u65f6\u4f2a\u9020\u3002")
+        st.success("\u5df2\u8bfb\u53d6\u5c40\u90e8\u590d\u6838\u7ed3\u679c\uff1a\u56fe\u50cf\u6765\u81ea\u5916\u90e8\u6216\u5c40\u90e8\u590d\u6838\u6d41\u7a0b\uff0c\u4e0d\u662f\u7f51\u9875\u4e34\u65f6\u4f2a\u9020\u3002")
     st.caption(f"case: {Path(case_dir).name}")
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("\u4e0a/\u4e0b\u534a\u7ba1 H2 \u5dee\u503c", f"{metrics.get('top_bottom_h2_delta', 0):.3f}")
@@ -273,45 +285,14 @@ def render_cfd_results(case_dir):
     extra_cols[0].metric("\u7f51\u683c\u5355\u5143\u6570", f"{int(metrics.get('mesh_cells', 0))}")
     extra_cols[1].metric("\u6700\u5927\u5c40\u90e8\u901f\u5ea6", f"{metrics.get('max_speed_mps', 0):.3f} m/s")
     extra_cols[2].metric("\u7ec4\u5206\u548c\u8bef\u5dee", f"{metrics.get('species_sum_max_error', 0):.1e}")
-    st.caption(solver)
-    summary_path = ROOT / "outputs" / "cfd3d" / "openfoam_scalarTransport_summary.csv"
-    if summary_path.exists():
-        summary = pd.read_csv(summary_path)
-        case_id = Path(case_dir).name.removesuffix("_reduced2d").removesuffix("_buoyant2d")
-        row = summary[summary["case_id"] == case_id]
-        if not row.empty:
-            status = row.iloc[0]
-            st.success(
-                "\u68c0\u67e5\u72b6\u6001\uff1a"
-                f"OpenFOAM mesh={int(status['mesh_cells'])} cells\uff1b"
-                f"Mesh OK={bool(status['mesh_ok'])}\uff1b"
-                f"300s={bool(status['solver_reached_300s'])}\uff1b"
-                f"End={bool(status['solver_end'])}\uff1b"
-                f"VTK={bool(status['vtk_exported'])}\uff1b"
-                f"Fatal/Error={bool(status['fatal_or_error'])}"
-            )
-            check = row[[
-                "case_id",
-                "mesh_cells",
-                "mesh_ok",
-                "solver_reached_300s",
-                "solver_end",
-                "vtk_exported",
-                "fatal_or_error",
-            ]].rename(columns={
-                "case_id": "case",
-                "mesh_cells": "\u7f51\u683c\u5355\u5143\u6570",
-                "mesh_ok": "\u7f51\u683c\u68c0\u67e5",
-                "solver_reached_300s": "\u8ba1\u7b97\u5230 300s",
-                "solver_end": "\u6c42\u89e3\u6b63\u5e38\u7ed3\u675f",
-                "vtk_exported": "VTK \u5df2\u5bfc\u51fa",
-                "fatal_or_error": "\u662f\u5426\u6709\u81f4\u547d\u9519\u8bef",
-            })
-            st.dataframe(check, width="stretch", hide_index=True)
-    st.image(str(images["xz_slice_h2"]), caption="x-z \u7eb5\u5256\u9762\u4e91\u56fe")
+    display_solver = solver
+    if "low-Mach buoyant" in solver:
+        display_solver = "\u5c40\u90e8\u4e8c\u7ef4\u4f4e\u9a6c\u8d6b\u6d6e\u529b\u591a\u7ec4\u5206\u8f93\u8fd0\u590d\u6838\uff08Python \u79bb\u7ebf\u6c42\u89e3\uff09"
+    st.caption(display_solver)
+    st.image(str(images["xz_slice_h2"]), caption="x-z \u7eb5\u5256\u9762 H2 \u5206\u5e03")
     cols = st.columns(2)
-    cols[0].image(str(images["cross_section_h2"]), caption="\u5706\u622a\u9762 H2 \u4e91\u56fe")
-    cols[1].image(str(images["flammable_region"]), caption="\u53ef\u71c3\u98ce\u9669\u533a\u4e91\u56fe")
+    cols[0].image(str(images["cross_section_h2"]), caption="\u622a\u9762 H2 \u5206\u5e03")
+    cols[1].image(str(images["flammable_region"]), caption="\u53ef\u71c3\u98ce\u9669\u533a\u5206\u5e03")
     if "velocity_magnitude" in images:
         st.image(str(images["velocity_magnitude"]), caption="\u6d6e\u529b\u9a71\u52a8\u5c40\u90e8\u901f\u5ea6\u573a")
     vol = find_cfd_volume_file(case_dir)
@@ -324,7 +305,10 @@ def render_cfd_results(case_dir):
             mime="application/octet-stream",
         )
     if metrics.get("note"):
-        st.info(str(metrics["note"]))
+        if "low-Mach buoyant" in solver:
+            st.info("\u8be5\u7ed3\u679c\u7528\u4e8e\u8865\u5145\u8bc4\u4f30\u505c\u8f93\u540e\u7684\u622a\u9762\u5206\u5c42\u98ce\u9669\uff1b\u6b63\u5f0f\u4e09\u7ef4\u5de5\u7a0b\u6821\u6838\u5e94\u4ee5 Fluent/OpenFOAM \u5b8c\u6574\u7b97\u4f8b\u4e3a\u51c6\u3002")
+        else:
+            st.info(str(metrics["note"]))
 
 
 def default_cfd_label_index(labels):
@@ -335,27 +319,6 @@ def default_cfd_label_index(labels):
         if "stop60" in label:
             return i
     return 1 if len(labels) > 1 else 0
-
-
-def render_architecture_note():
-    st.subheader("\u4eff\u771f\u67b6\u6784\u4e0e\u6a21\u578b\u8fb9\u754c")
-    st.markdown(
-        "\n".join(
-            [
-                "### 1. \u4e3b\u7ebf\uff1a1D \u5168\u7ba1\u7f6e\u6362",
-                "\u4e00\u7ef4\u5bf9\u6d41-\u5f25\u6563\u6a21\u578b\u8d1f\u8d23 12 km \u5168\u7ba1\u8ba1\u7b97\uff0c\u8f93\u51fa H2/N2/Air \u6469\u5c14\u5206\u6570\u3001\u6df7\u6c14\u6bb5\u3001\u53ef\u71c3\u98ce\u9669\u6bb5\u548c\u6709\u6548 N2 \u9694\u79bb\u6bb5\u3002",
-                "",
-                "### 2. \u5c40\u90e8\uff1a\u4e8c\u7ef4\u6d6e\u5347 CFD \u590d\u6838",
-                "\u5bf9\u4efb\u52a12\u505c\u8f93\u5de5\u51b5\uff0c\u7a0b\u5e8f\u8bfb\u53d6\u4e00\u7ef4\u7ed3\u679c\u7684\u5c40\u90e8\u521d\u59cb\u573a\uff0c\u5728 x-z \u7a97\u53e3\u5185\u6c42\u89e3\u4f4e\u9a6c\u8d6b\u6d6e\u5347\u591a\u7ec4\u5206\u8f93\u8fd0\uff0c\u5305\u542b\u52a8\u91cf\u3001\u6d6e\u529b\u548c H2/N2/Air \u7ec4\u5206\u8f93\u8fd0\u3002",
-                "",
-                "### 3. \u4e09\u7ef4\uff1a\u53ef\u505a\uff0c\u4f46\u4e0d\u653e\u5728\u7f51\u9875\u5b9e\u65f6\u6c42\u89e3",
-                "\u5b8c\u6574\u4e09\u7ef4\u53ef\u538b\u7f29 CFD \u9700\u8981\u5706\u7ba1\u4e09\u7ef4\u7f51\u683c\u3001\u53ef\u538b\u7f29\u52a8\u91cf\u65b9\u7a0b\u3001\u591a\u7ec4\u5206\u8d28\u91cf\u5206\u6570/\u6469\u5c14\u5206\u6570\u8f6c\u6362\u3001\u91cd\u529b\u548c\u58c1\u9762\u8fb9\u754c\u3002\u5b83\u5e94\u8be5\u79bb\u7ebf\u8dd1 Fluent/OpenFOAM case\uff0c\u518d\u7531\u7f51\u9875\u8bfb\u53d6\u56fe\u50cf\u3001VTK/VTU \u548c metrics.json\u3002",
-                "",
-                "### 4. \u7f51\u9875\u5b9a\u4f4d",
-                "\u7f51\u9875\u662f\u7ed3\u679c\u9a7e\u9a76\u8231\uff1a\u53ef\u4ee5\u89e6\u53d1 1D \u5feb\u901f\u8ba1\u7b97\uff0c\u5c55\u793a\u52a8\u753b\u548c\u5df2\u5b8c\u6210\u7684 CFD/\u590d\u6838\u7ed3\u679c\uff1b\u4e0d\u5728\u524d\u7aef\u4e34\u65f6\u4f2a\u9020\u4e09\u7ef4 CFD\u3002",
-            ]
-        )
-    )
 
 
 def main():
@@ -407,8 +370,7 @@ def main():
             "\u52a8\u6001\u6a21\u62df",
             "\u66f2\u7ebf\u6307\u6807",
             "\u4efb\u52a12\u4e2d\u65ad",
-            "CFD \u590d\u6838",
-            "\u67b6\u6784\u8bf4\u660e",
+            "\u5206\u5c42\u590d\u6838",
         ],
         default="\u52a8\u6001\u6a21\u62df",
         label_visibility="collapsed",
@@ -436,12 +398,10 @@ def main():
         st.download_button(C["download"], display.to_csv(index=False).encode("utf-8-sig"), "purge_metrics_cn.csv", "text/csv")
     elif page == "\u4efb\u52a12\u4e2d\u65ad":
         render_task2()
-    elif page == "CFD \u590d\u6838":
+    elif page == "\u5206\u5c42\u590d\u6838":
         render_cfd_input()
         render_prepared_3d_cases()
         render_cfd_results(cfd_case)
-    else:
-        render_architecture_note()
 
 
 if __name__ == "__main__":
