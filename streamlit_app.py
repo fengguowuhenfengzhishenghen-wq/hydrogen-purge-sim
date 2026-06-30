@@ -271,28 +271,46 @@ def render_cfd_results(case_dir):
         st.warning(C["no_cfd"])
         return
     solver = str(metrics.get("solver", ""))
+    is_openfoam = "OpenFOAM" in solver
     if "low-Mach buoyant" in solver:
         st.success("\u5df2\u8bfb\u53d6\u5c40\u90e8\u4e8c\u7ef4\u5206\u5c42\u590d\u6838\u7ed3\u679c\uff1a\u6a21\u578b\u5305\u542b\u6d6e\u529b\u9a71\u52a8\u548c H2/N2/Air \u7ec4\u5206\u8f93\u8fd0\uff0c\u7528\u4e8e\u63d0\u793a\u505c\u8f93\u5206\u5c42\u98ce\u9669\u3002")
+    elif is_openfoam:
+        st.success("\u5df2\u8bfb\u53d6 OpenFOAM rhoReactingFoam \u4e09\u7ef4\u5706\u7ba1\u590d\u6838\u7ed3\u679c\uff1a\u5305\u542b H2/O2/N2 \u7ec4\u5206\u3001\u901f\u5ea6\u573a\u548c\u538b\u529b\u573a\u3002")
     else:
         st.success("\u5df2\u8bfb\u53d6\u5c40\u90e8\u590d\u6838\u7ed3\u679c\uff1a\u56fe\u50cf\u6765\u81ea\u5916\u90e8\u6216\u5c40\u90e8\u590d\u6838\u6d41\u7a0b\uff0c\u4e0d\u662f\u7f51\u9875\u4e34\u65f6\u4f2a\u9020\u3002")
     st.caption(f"case: {Path(case_dir).name}")
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("\u4e0a/\u4e0b\u534a\u7ba1 H2 \u5dee\u503c", f"{metrics.get('top_bottom_h2_delta', 0):.3f}")
-    c2.metric("\u4e0a/\u4e0b\u534a\u7ba1 N2 \u5dee\u503c", f"{metrics.get('top_bottom_n2_delta', 0):.3f}")
-    c3.metric("\u4e0a/\u4e0b\u534a\u7ba1 Air \u5dee\u503c", f"{metrics.get('top_bottom_air_delta', 0):.3f}")
-    c4.metric("H2-Air \u5782\u5411\u5206\u79bb", f"{metrics.get('h2_air_vertical_separation_m', 0):.3f} m")
+    c1.metric("\u4e0a/\u4e0b\u534a\u7ba1 H2 \u5dee\u503c", f"{metrics.get('top_bottom_h2_delta', 0):.3e}" if is_openfoam else f"{metrics.get('top_bottom_h2_delta', 0):.3f}")
+    if is_openfoam:
+        c2.metric("\u4e0a/\u4e0b\u534a\u7ba1 O2 \u5dee\u503c", f"{metrics.get('top_bottom_o2_delta', 0):.3e}")
+        c3.metric("\u53ef\u71c3\u4f53\u79ef\u6bd4\u4f8b", f"{100*metrics.get('flammable_volume_ratio', 0):.1f}%")
+        c4.metric("\u6700\u5927\u901f\u5ea6", f"{metrics.get('max_speed_mps', 0):.2e} m/s")
+    else:
+        c2.metric("\u4e0a/\u4e0b\u534a\u7ba1 N2 \u5dee\u503c", f"{metrics.get('top_bottom_n2_delta', 0):.3f}")
+        c3.metric("\u4e0a/\u4e0b\u534a\u7ba1 Air \u5dee\u503c", f"{metrics.get('top_bottom_air_delta', 0):.3f}")
+        c4.metric("H2-Air \u5782\u5411\u5206\u79bb", f"{metrics.get('h2_air_vertical_separation_m', 0):.3f} m")
     extra_cols = st.columns(3)
     extra_cols[0].metric("\u4e0a\u534a\u7ba1 H2 \u6700\u5927\u503c", f"{metrics.get('top_h2_max', 0):.3f}")
-    extra_cols[1].metric("\u53ef\u71c3\u9762\u79ef\u6bd4\u4f8b", f"{100*metrics.get('flammable_area_ratio', 0):.1f}%")
-    extra_cols[2].metric("\u6700\u5927\u5c40\u90e8\u901f\u5ea6", f"{metrics.get('max_speed_mps', 0):.3f} m/s")
-    detail = pd.DataFrame([{
-        "\u7f51\u683c": f"{int(metrics.get('nx', 0))} x {int(metrics.get('nz', 0))}",
-        "\u5355\u5143\u6570": int(metrics.get("mesh_cells", 0)),
-        "\u65f6\u95f4\u6b65\u957f (s)": float(metrics.get("dt_s", 0)),
-        "\u6d6e\u529b\u7cfb\u6570": float(metrics.get("buoyancy_scale", 0)),
-        "\u901f\u5ea6\u88c1\u526a (m/s)": float(metrics.get("velocity_clip_mps", 0)),
-        "\u7ec4\u5206\u548c\u8bef\u5dee": f"{metrics.get('species_sum_max_error', 0):.1e}",
-    }])
+    extra_cols[1].metric("\u538b\u529b\u6700\u7ec8\u6b8b\u5dee" if is_openfoam else "\u53ef\u71c3\u9762\u79ef\u6bd4\u4f8b", f"{metrics.get('p_final_residual', 0):.2e}" if is_openfoam else f"{100*metrics.get('flammable_area_ratio', 0):.1f}%")
+    extra_cols[2].metric("\u8fde\u7eed\u6027\u7d2f\u8ba1\u8bef\u5dee" if is_openfoam else "\u6700\u5927\u5c40\u90e8\u901f\u5ea6", f"{metrics.get('continuity_cumulative', 0):.2e}" if is_openfoam else f"{metrics.get('max_speed_mps', 0):.3f} m/s")
+    if is_openfoam:
+        detail = pd.DataFrame([{
+            "\u6c42\u89e3\u5668": solver,
+            "\u7f51\u683c": f"{int(metrics.get('nx', 0))} x {int(metrics.get('ny', 0))} x {int(metrics.get('nz', 0))}",
+            "\u5355\u5143\u6570": int(metrics.get("mesh_cells", 0)),
+            "\u6700\u65b0\u65f6\u95f4 (s)": float(metrics.get("latest_time_s", 0)),
+            "\u5c40\u90e8\u957f\u5ea6 (m)": float(metrics.get("local_length_m", 0)),
+            "\u8d28\u91cf\u5206\u6570\u548c\u8bef\u5dee": f"{metrics.get('mass_fraction_sum_max_error', 0):.1e}",
+        }])
+    else:
+        detail = pd.DataFrame([{
+            "\u7f51\u683c": f"{int(metrics.get('nx', 0))} x {int(metrics.get('nz', 0))}",
+            "\u5355\u5143\u6570": int(metrics.get("mesh_cells", 0)),
+            "\u65f6\u95f4\u6b65\u957f (s)": float(metrics.get("dt_s", 0)),
+            "\u6d6e\u529b\u7cfb\u6570": float(metrics.get("buoyancy_scale", 0)),
+            "\u901f\u5ea6\u88c1\u526a (m/s)": float(metrics.get("velocity_clip_mps", 0)),
+            "\u7ec4\u5206\u548c\u8bef\u5dee": f"{metrics.get('species_sum_max_error', 0):.1e}",
+        }])
     st.dataframe(detail, width="stretch", hide_index=True)
     display_solver = solver
     if "low-Mach buoyant" in solver:
@@ -321,6 +339,9 @@ def render_cfd_results(case_dir):
 
 
 def default_cfd_label_index(labels):
+    for i, label in enumerate(labels):
+        if "stop60" in label and "openfoam3d" in label:
+            return i
     for i, label in enumerate(labels):
         if "stop60" in label and "buoyant2d" in label:
             return i
@@ -373,7 +394,7 @@ def main():
         "\u5e73\u5747 Fr": float(metrics_df["Fr"].mean()),
     }]), width="stretch", hide_index=True)
 
-    page = st.segmented_control(
+    page = st.radio(
         "\u6a21\u5757\u5207\u6362",
         [
             "\u52a8\u6001\u6a21\u62df",
@@ -381,7 +402,8 @@ def main():
             "\u4efb\u52a12\u4e2d\u65ad",
             "\u5206\u5c42\u590d\u6838",
         ],
-        default="\u52a8\u6001\u6a21\u62df",
+        index=0,
+        horizontal=True,
         label_visibility="collapsed",
     )
 
