@@ -41,7 +41,7 @@ def write_vtk(path: Path, result: LocalCFD2DResult) -> None:
     nx, nz, _ = X.shape
     with path.open("w", encoding="utf-8") as f:
         f.write("# vtk DataFile Version 3.0\n")
-        f.write("Local 2D buoyant multi-species CFD field\n")
+        f.write("Local 2D buoyant multi-species transport-check field\n")
         f.write("ASCII\n")
         f.write("DATASET STRUCTURED_POINTS\n")
         f.write(f"DIMENSIONS {nx} {nz} 1\n")
@@ -81,7 +81,7 @@ def write_figures(out_dir: Path, result: LocalCFD2DResult, source_case: str) -> 
     ax.axhline(0.0, color="#1f2937", lw=0.8, alpha=0.7)
     ax.set_xlabel("x position (km)")
     ax.set_ylabel("z position (m)")
-    ax.set_title(f"Local 2D buoyant CFD mole-fraction field: {source_case}")
+    ax.set_title(f"Local 2D buoyant stratification field: {source_case}")
     fig.tight_layout()
     fig.savefig(out_dir / "xz_slice_h2.png")
     plt.close(fig)
@@ -140,7 +140,7 @@ def run_case(case_dir: Path, out_root: Path, cfg: LocalCFD2DConfig) -> Path:
             "source_case": case_dir.name,
             "D_m": cfg.diameter_m,
             "note": (
-                "Solved local 2D low-Mach buoyant multi-species CFD check. "
+                "Solved local 2D low-Mach buoyant multi-species transport check. "
                 "It includes momentum, buoyancy, and H2/N2/Air species transport, "
                 "but is not a full 3D compressible pipe CFD."
             ),

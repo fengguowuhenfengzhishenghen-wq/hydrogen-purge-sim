@@ -168,20 +168,60 @@ def run_local_cfd2d(profile_x: np.ndarray, profile_mole: np.ndarray, cfg: LocalC
 
 def compute_local_cfd2d_metrics(x: np.ndarray, z: np.ndarray, X: np.ndarray, u: np.ndarray, w: np.ndarray, cfg: LocalCFD2DConfig) -> dict[str, float | int | str]:
     x_h2 = X[:, :, 0]
+    x_n2 = X[:, :, 1]
     x_air = X[:, :, 2]
     top = z >= 0.0
     bottom = z < 0.0
     flam = flammable_mask(x_h2, x_air)
     speed = np.sqrt(u * u + w * w)
+
+    def z_centroid(field: np.ndarray) -> float:
+        weights = np.maximum(field, 0.0)
+        total = float(weights.sum())
+        if total <= 1.0e-14:
+            return 0.0
+        return float((weights * z[None, :]).sum() / total)
+
+    h2_top_mean = float(x_h2[:, top].mean())
+    h2_bottom_mean = float(x_h2[:, bottom].mean())
+    n2_top_mean = float(x_n2[:, top].mean())
+    n2_bottom_mean = float(x_n2[:, bottom].mean())
+    air_top_mean = float(x_air[:, top].mean())
+    air_bottom_mean = float(x_air[:, bottom].mean())
+    h2_z = z_centroid(x_h2)
+    n2_z = z_centroid(x_n2)
+    air_z = z_centroid(x_air)
     return {
-        "solver": "Python 2D low-Mach buoyant multi-species CFD (vorticity-streamfunction)",
+        "solver": "Python 2D low-Mach buoyant multi-species transport check (vorticity-streamfunction)",
         "model_scope": "local x-z shutdown window; not full 3D compressible pipe CFD",
         "mesh_cells": int(cfg.nx * cfg.nz),
+        "nx": int(cfg.nx),
+        "nz": int(cfg.nz),
+        "dt_s": float(cfg.dt_s),
         "stop_duration_s": float(cfg.duration_s),
         "local_length_m": float(x[-1] - x[0]),
-        "top_bottom_h2_delta": float(x_h2[:, top].mean() - x_h2[:, bottom].mean()),
+        "diameter_m": float(cfg.diameter_m),
+        "nu_m2_s": float(cfg.nu_m2_s),
+        "diffusivity_m2_s": float(cfg.diffusivity_m2_s),
+        "buoyancy_scale": float(cfg.buoyancy_scale),
+        "velocity_clip_mps": float(cfg.velocity_clip_mps),
+        "poisson_iterations": int(cfg.poisson_iterations),
+        "h2_top_mean": h2_top_mean,
+        "h2_bottom_mean": h2_bottom_mean,
+        "n2_top_mean": n2_top_mean,
+        "n2_bottom_mean": n2_bottom_mean,
+        "air_top_mean": air_top_mean,
+        "air_bottom_mean": air_bottom_mean,
+        "top_bottom_h2_delta": h2_top_mean - h2_bottom_mean,
+        "top_bottom_n2_delta": n2_top_mean - n2_bottom_mean,
+        "top_bottom_air_delta": air_top_mean - air_bottom_mean,
+        "h2_vertical_centroid_m": h2_z,
+        "n2_vertical_centroid_m": n2_z,
+        "air_vertical_centroid_m": air_z,
+        "h2_air_vertical_separation_m": h2_z - air_z,
+        "h2_n2_vertical_separation_m": h2_z - n2_z,
         "top_h2_max": float(x_h2[:, top].max()),
-        "bottom_h2_mean": float(x_h2[:, bottom].mean()),
+        "bottom_h2_mean": h2_bottom_mean,
         "flammable_area_ratio": float(flam.mean()),
         "flammable_volume_ratio": float(flam.mean()),
         "max_speed_mps": float(speed.max()),

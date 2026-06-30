@@ -278,13 +278,22 @@ def render_cfd_results(case_dir):
     st.caption(f"case: {Path(case_dir).name}")
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("\u4e0a/\u4e0b\u534a\u7ba1 H2 \u5dee\u503c", f"{metrics.get('top_bottom_h2_delta', 0):.3f}")
-    c2.metric("\u4e0a\u534a\u7ba1 H2 \u6700\u5927\u503c", f"{metrics.get('top_h2_max', 0):.3f}")
-    c3.metric("\u53ef\u71c3\u9762\u79ef\u6bd4\u4f8b", f"{100*metrics.get('flammable_area_ratio', 0):.1f}%")
-    c4.metric("\u53ef\u71c3\u4f53\u79ef\u6bd4\u4f8b", f"{100*metrics.get('flammable_volume_ratio', 0):.1f}%")
+    c2.metric("\u4e0a/\u4e0b\u534a\u7ba1 N2 \u5dee\u503c", f"{metrics.get('top_bottom_n2_delta', 0):.3f}")
+    c3.metric("\u4e0a/\u4e0b\u534a\u7ba1 Air \u5dee\u503c", f"{metrics.get('top_bottom_air_delta', 0):.3f}")
+    c4.metric("H2-Air \u5782\u5411\u5206\u79bb", f"{metrics.get('h2_air_vertical_separation_m', 0):.3f} m")
     extra_cols = st.columns(3)
-    extra_cols[0].metric("\u7f51\u683c\u5355\u5143\u6570", f"{int(metrics.get('mesh_cells', 0))}")
-    extra_cols[1].metric("\u6700\u5927\u5c40\u90e8\u901f\u5ea6", f"{metrics.get('max_speed_mps', 0):.3f} m/s")
-    extra_cols[2].metric("\u7ec4\u5206\u548c\u8bef\u5dee", f"{metrics.get('species_sum_max_error', 0):.1e}")
+    extra_cols[0].metric("\u4e0a\u534a\u7ba1 H2 \u6700\u5927\u503c", f"{metrics.get('top_h2_max', 0):.3f}")
+    extra_cols[1].metric("\u53ef\u71c3\u9762\u79ef\u6bd4\u4f8b", f"{100*metrics.get('flammable_area_ratio', 0):.1f}%")
+    extra_cols[2].metric("\u6700\u5927\u5c40\u90e8\u901f\u5ea6", f"{metrics.get('max_speed_mps', 0):.3f} m/s")
+    detail = pd.DataFrame([{
+        "\u7f51\u683c": f"{int(metrics.get('nx', 0))} x {int(metrics.get('nz', 0))}",
+        "\u5355\u5143\u6570": int(metrics.get("mesh_cells", 0)),
+        "\u65f6\u95f4\u6b65\u957f (s)": float(metrics.get("dt_s", 0)),
+        "\u6d6e\u529b\u7cfb\u6570": float(metrics.get("buoyancy_scale", 0)),
+        "\u901f\u5ea6\u88c1\u526a (m/s)": float(metrics.get("velocity_clip_mps", 0)),
+        "\u7ec4\u5206\u548c\u8bef\u5dee": f"{metrics.get('species_sum_max_error', 0):.1e}",
+    }])
+    st.dataframe(detail, width="stretch", hide_index=True)
     display_solver = solver
     if "low-Mach buoyant" in solver:
         display_solver = "\u5c40\u90e8\u4e8c\u7ef4\u4f4e\u9a6c\u8d6b\u6d6e\u529b\u591a\u7ec4\u5206\u8f93\u8fd0\u590d\u6838\uff08Python \u79bb\u7ebf\u6c42\u89e3\uff09"
