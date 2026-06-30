@@ -494,21 +494,31 @@ def default_cfd_label_index(labels):
     return 1 if len(labels) > 1 else 0
 
 
+def render_architecture_note():
+    st.subheader("\u4eff\u771f\u67b6\u6784\u4e0e\u6a21\u578b\u8fb9\u754c")
+    st.markdown(
+        "\n".join(
+            [
+                "### 1. \u4e3b\u7ebf\uff1a1D \u5168\u7ba1\u7f6e\u6362",
+                "\u4e00\u7ef4\u5bf9\u6d41-\u5f25\u6563\u6a21\u578b\u8d1f\u8d23 12 km \u5168\u7ba1\u8ba1\u7b97\uff0c\u8f93\u51fa H2/N2/Air \u6469\u5c14\u5206\u6570\u3001\u6df7\u6c14\u6bb5\u3001\u53ef\u71c3\u98ce\u9669\u6bb5\u548c\u6709\u6548 N2 \u9694\u79bb\u6bb5\u3002",
+                "",
+                "### 2. \u5c40\u90e8\uff1a\u4e8c\u7ef4\u6d6e\u5347 CFD \u590d\u6838",
+                "\u5bf9\u4efb\u52a12\u505c\u8f93\u5de5\u51b5\uff0c\u7a0b\u5e8f\u8bfb\u53d6\u4e00\u7ef4\u7ed3\u679c\u7684\u5c40\u90e8\u521d\u59cb\u573a\uff0c\u5728 x-z \u7a97\u53e3\u5185\u6c42\u89e3\u4f4e\u9a6c\u8d6b\u6d6e\u5347\u591a\u7ec4\u5206\u8f93\u8fd0\uff0c\u5305\u542b\u52a8\u91cf\u3001\u6d6e\u529b\u548c H2/N2/Air \u7ec4\u5206\u8f93\u8fd0\u3002",
+                "",
+                "### 3. \u4e09\u7ef4\uff1a\u53ef\u505a\uff0c\u4f46\u4e0d\u653e\u5728\u7f51\u9875\u5b9e\u65f6\u6c42\u89e3",
+                "\u5b8c\u6574\u4e09\u7ef4\u53ef\u538b\u7f29 CFD \u9700\u8981\u5706\u7ba1\u4e09\u7ef4\u7f51\u683c\u3001\u53ef\u538b\u7f29\u52a8\u91cf\u65b9\u7a0b\u3001\u591a\u7ec4\u5206\u8d28\u91cf\u5206\u6570/\u6469\u5c14\u5206\u6570\u8f6c\u6362\u3001\u91cd\u529b\u548c\u58c1\u9762\u8fb9\u754c\u3002\u5b83\u5e94\u8be5\u79bb\u7ebf\u8dd1 Fluent/OpenFOAM case\uff0c\u518d\u7531\u7f51\u9875\u8bfb\u53d6\u56fe\u50cf\u3001VTK/VTU \u548c metrics.json\u3002",
+                "",
+                "### 4. \u7f51\u9875\u5b9a\u4f4d",
+                "\u7f51\u9875\u662f\u7ed3\u679c\u9a7e\u9a76\u8231\uff1a\u53ef\u4ee5\u89e6\u53d1 1D \u5feb\u901f\u8ba1\u7b97\uff0c\u5c55\u793a\u52a8\u753b\u548c\u5df2\u5b8c\u6210\u7684 CFD/\u590d\u6838\u7ed3\u679c\uff1b\u4e0d\u5728\u524d\u7aef\u4e34\u65f6\u4f2a\u9020\u4e09\u7ef4 CFD\u3002",
+            ]
+        )
+    )
+
+
 def main():
     st.set_page_config(page_title=C["title"], layout="wide")
     st.title(C["title"])
-    st.info(C["note"])
-    with st.expander("\u4eff\u771f\u67b6\u6784\u8bf4\u660e", expanded=False):
-        st.markdown(
-            "\n".join(
-                [
-                    "- **1D \u4e3b\u6a21\u578b**\uff1a\u8d1f\u8d23 12 km \u5168\u7ba1\u7f6e\u6362\u3001\u6df7\u6c14\u6bb5\u3001\u53ef\u71c3\u98ce\u9669\u6bb5\u548c\u6709\u6548 N2 \u9694\u79bb\u6bb5\u3002",
-                    "- **\u5c40\u90e8\u653e\u5927**\uff1a\u6765\u81ea 1D \u8ba1\u7b97\u7ed3\u679c\uff0c\u7528\u4e8e\u67e5\u770b H2/N2/Air \u754c\u9762\u3002",
-                    "- **\u5c40\u90e8\u5206\u5c42\u590d\u6838**\uff1a\u8bfb\u53d6\u5c40\u90e8\u4e8c\u7ef4\u6d6e\u5347 CFD \u7ed3\u679c\uff08\u542b\u52a8\u91cf\u3001\u6d6e\u529b\u548c H2/N2/Air \u7ec4\u5206\u8f93\u8fd0\uff09\uff1bOpenFOAM scalarTransportFoam \u7ed3\u679c\u4f5c\u4e3a\u6807\u91cf\u8f93\u8fd0\u63a5\u53e3\u590d\u6838\u3002\u8fd9\u4e00\u5c42\u4ecd\u4e0d\u7b49\u540c\u4e8e\u5b8c\u6574\u4e09\u7ef4\u53ef\u538b\u7f29 CFD\u3002",
-                    "- **3D \u7ba1\u9053\u52a8\u753b**\uff1a\u53ea\u662f\u5c06 1D \u6469\u5c14\u5206\u6570\u6620\u5c04\u5230\u7ba1\u9053\u753b\u9762\uff0c\u4fbf\u4e8e\u7b54\u8fa9\u5c55\u793a\u3002",
-                ]
-            )
-        )
+    st.caption(C["note"])
     st.sidebar.header(C["input"])
     D = st.sidebar.number_input(C["diam"], min_value=0.7, max_value=1.4, value=1.2, step=0.1, format="%.2f")
     u = st.sidebar.number_input(C["vel"], min_value=1.0, max_value=15.0, value=7.0, step=1.0, format="%.2f")
@@ -518,7 +528,6 @@ def main():
     pressure_label = st.sidebar.selectbox(C["pressure"], list(PRESSURE_MODES), index=1)
     t_factor = st.sidebar.slider("\u6a21\u62df\u7ec8\u6b62\u500d\u6570 L/u", 0.4, 1.2, 1.0, 0.1)
     particles = st.sidebar.slider("3D \u4ee3\u8868\u6027\u7c92\u5b50\u6570\uff08\u4ec5\u53ef\u89c6\u5316\uff09", 0, 800, 360, 40)
-    show_task2 = st.sidebar.checkbox("\u663e\u793a\u4efb\u52a12\u4e2d\u65ad\u8bf4\u660e", value=True)
     cfd_cases = list_cfd_cases(ROOT / "outputs" / "cfd3d")
     if cfd_cases:
         labels = ["\u4e0d\u663e\u793a\u5916\u90e8\u590d\u6838\u7ed3\u679c"] + [p.name for p in cfd_cases]
@@ -539,7 +548,6 @@ def main():
     result = st.session_state["result"]
     metrics_df = pd.DataFrame(result.metrics)
 
-    st.subheader(C["params"])
     st.dataframe(pd.DataFrame([{
         C["diam"]: D,
         C["vel"]: u,
@@ -550,28 +558,46 @@ def main():
         "\u5e73\u5747 Fr": float(metrics_df["Fr"].mean()),
     }]), width="stretch", hide_index=True)
 
-    idx = st.slider(C["time"], 0, len(result.times) - 1, max(0, len(result.times) // 2))
-    st.caption(f"{result.times[idx]/60:.1f} min")
-    st.subheader(C["pipe"])
-    shown_idx = render_pipe(result, idx, particles)
-    st.subheader(C["local"])
-    render_local_zoom(result, shown_idx)
-    st.subheader(C["profiles"])
-    render_curves(result, metrics_df)
-    st.subheader(C["metrics"])
-    display = metrics_df.rename(columns={
-        "time_s": "\u65f6\u95f4 (s)",
-        "mixed_length_m": "\u6df7\u6c14\u6bb5\u957f\u5ea6 (m)",
-        "flammable_length_m": "\u53ef\u71c3\u98ce\u9669\u6bb5\u957f\u5ea6 (m)",
-        "effective_n2_length_m": "\u6709\u6548 N2 \u9694\u79bb\u6bb5\u957f\u5ea6 (m)",
-        "h2_front_m": "H2 \u524d\u7f18\u4f4d\u7f6e (m)",
-    })
-    st.dataframe(display, width="stretch")
-    st.download_button(C["download"], display.to_csv(index=False).encode("utf-8-sig"), "purge_metrics_cn.csv", "text/csv")
-    if show_task2:
+    page = st.segmented_control(
+        "\u6a21\u5757\u5207\u6362",
+        [
+            "\u52a8\u6001\u6a21\u62df",
+            "\u66f2\u7ebf\u6307\u6807",
+            "\u4efb\u52a12\u4e2d\u65ad",
+            "CFD \u590d\u6838",
+            "\u67b6\u6784\u8bf4\u660e",
+        ],
+        default="\u52a8\u6001\u6a21\u62df",
+        label_visibility="collapsed",
+    )
+
+    if page == "\u52a8\u6001\u6a21\u62df":
+        idx = st.slider(C["time"], 0, len(result.times) - 1, max(0, len(result.times) // 2))
+        st.caption(f"{result.times[idx]/60:.1f} min")
+        st.subheader(C["pipe"])
+        shown_idx = render_pipe(result, idx, particles)
+        st.subheader(C["local"])
+        render_local_zoom(result, shown_idx)
+    elif page == "\u66f2\u7ebf\u6307\u6807":
+        st.subheader(C["profiles"])
+        render_curves(result, metrics_df)
+        st.subheader(C["metrics"])
+        display = metrics_df.rename(columns={
+            "time_s": "\u65f6\u95f4 (s)",
+            "mixed_length_m": "\u6df7\u6c14\u6bb5\u957f\u5ea6 (m)",
+            "flammable_length_m": "\u53ef\u71c3\u98ce\u9669\u6bb5\u957f\u5ea6 (m)",
+            "effective_n2_length_m": "\u6709\u6548 N2 \u9694\u79bb\u6bb5\u957f\u5ea6 (m)",
+            "h2_front_m": "H2 \u524d\u7f18\u4f4d\u7f6e (m)",
+        })
+        st.dataframe(display, width="stretch")
+        st.download_button(C["download"], display.to_csv(index=False).encode("utf-8-sig"), "purge_metrics_cn.csv", "text/csv")
+    elif page == "\u4efb\u52a12\u4e2d\u65ad":
         render_task2()
-    render_cfd_input()
-    render_cfd_results(cfd_case)
+    elif page == "CFD \u590d\u6838":
+        render_cfd_input()
+        render_cfd_results(cfd_case)
+    else:
+        render_architecture_note()
 
 
 if __name__ == "__main__":
